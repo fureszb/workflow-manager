@@ -113,6 +113,20 @@ class Document(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     parent = relationship("Document", remote_side="Document.id")
+    chunks = relationship("DocumentChunk", back_populates="document")
+
+
+# --- Document Chunks (for RAG / vector search) ---
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    chunk_index = Column(Integer, default=0)
+    content = Column(Text, nullable=False)
+    embedding_id = Column(String(255))
+    created_at = Column(DateTime, server_default=func.now())
+
+    document = relationship("Document", back_populates="chunks")
 
 
 # --- Emails ---
@@ -133,6 +147,32 @@ class Email(Base):
     ai_summary = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
 
+    process_instance = relationship("ProcessInstance")
+    attachments = relationship("EmailAttachment", back_populates="email")
+    task_links = relationship("EmailTaskLink", back_populates="email")
+
+
+class EmailAttachment(Base):
+    __tablename__ = "email_attachments"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email_id = Column(Integer, ForeignKey("emails.id"), nullable=False)
+    filename = Column(String(500), nullable=False)
+    file_path = Column(String(1000))
+    file_size = Column(Integer)
+    content_type = Column(String(255))
+    created_at = Column(DateTime, server_default=func.now())
+
+    email = relationship("Email", back_populates="attachments")
+
+
+class EmailTaskLink(Base):
+    __tablename__ = "email_task_links"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email_id = Column(Integer, ForeignKey("emails.id"), nullable=False)
+    process_instance_id = Column(Integer, ForeignKey("process_instances.id"), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    email = relationship("Email", back_populates="task_links")
     process_instance = relationship("ProcessInstance")
 
 
@@ -242,6 +282,20 @@ class AIPersonality(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+# --- AI Knowledge Log ---
+class AIKnowledgeLog(Base):
+    __tablename__ = "ai_knowledge_log"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey("documents.id"))
+    action = Column(String(50), nullable=False)
+    chunks_processed = Column(Integer, default=0)
+    status = Column(String(20), default="pending")
+    error_message = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+
+    document = relationship("Document")
 
 
 # --- Settings ---

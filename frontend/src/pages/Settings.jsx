@@ -1,195 +1,372 @@
+import { useState, useEffect } from 'react';
 import { useTheme } from '../store/ThemeContext';
+import toast from 'react-hot-toast';
+import api from '../utils/api';
+
+const TABS = [
+  { id: 'general', label: 'Általános' },
+  { id: 'ai', label: 'AI Személyiség' },
+  { id: 'theme', label: 'Téma' },
+  { id: 'notifications', label: 'Értesítések' },
+  { id: 'knowledge', label: 'Tudásbázis' },
+  { id: 'statuses', label: 'Státuszok' },
+  { id: 'processes', label: 'Folyamatok' },
+];
+
+const inputStyle = {
+  backgroundColor: 'var(--bg-secondary)',
+  borderColor: 'var(--border-color)',
+  color: 'var(--text-primary)',
+};
+
+const cardStyle = {
+  backgroundColor: 'var(--bg-card)',
+  borderColor: 'var(--border-color)',
+};
 
 const Settings = () => {
   const { theme, setTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState('general');
+  const [settings, setSettings] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get('/v1/settings').then((res) => {
+      setSettings(res.data);
+    }).catch(() => {});
+  }, []);
+
+  const updateField = (key, value) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put('/v1/settings', settings);
+      toast.success('Beállítások sikeresen mentve!');
+    } catch {
+      toast.error('Hiba a mentés során!');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderGeneral = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          OpenRouter API kulcs
+        </label>
+        <input
+          type="password"
+          value={settings.openrouter_api_key || ''}
+          onChange={(e) => updateField('openrouter_api_key', e.target.value)}
+          placeholder="sk-or-..."
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          OpenRouter alapértelmezett modell
+        </label>
+        <input
+          type="text"
+          value={settings.openrouter_default_model || ''}
+          onChange={(e) => updateField('openrouter_default_model', e.target.value)}
+          placeholder="openai/gpt-4o"
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          Ollama base URL
+        </label>
+        <input
+          type="text"
+          value={settings.ollama_base_url || ''}
+          onChange={(e) => updateField('ollama_base_url', e.target.value)}
+          placeholder="http://localhost:11434"
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          Ollama modell
+        </label>
+        <input
+          type="text"
+          value={settings.ollama_model || ''}
+          onChange={(e) => updateField('ollama_model', e.target.value)}
+          placeholder="llama3"
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          Chat kontextus méret
+        </label>
+        <input
+          type="number"
+          value={settings.chat_context_size || ''}
+          onChange={(e) => updateField('chat_context_size', e.target.value)}
+          placeholder="4096"
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          Audit log megőrzés (nap)
+        </label>
+        <input
+          type="number"
+          value={settings.audit_log_retention_days || ''}
+          onChange={(e) => updateField('audit_log_retention_days', e.target.value)}
+          placeholder="90"
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+          Automatikus havi feladat generálás
+        </label>
+        <input
+          type="checkbox"
+          checked={settings.auto_monthly_tasks === 'true'}
+          onChange={(e) => updateField('auto_monthly_tasks', e.target.checked ? 'true' : 'false')}
+          className="w-5 h-5"
+        />
+      </div>
+    </div>
+  );
+
+  const renderAI = () => (
+    <div className="space-y-4">
+      <p style={{ color: 'var(--text-secondary)' }}>
+        AI személyiség és viselkedés konfigurálása.
+      </p>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          AI szolgáltató
+        </label>
+        <select
+          value={settings.ai_provider || 'ollama'}
+          onChange={(e) => updateField('ai_provider', e.target.value)}
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        >
+          <option value="ollama">Ollama</option>
+          <option value="openrouter">OpenRouter</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          Rendszer prompt
+        </label>
+        <textarea
+          value={settings.ai_system_prompt || ''}
+          onChange={(e) => updateField('ai_system_prompt', e.target.value)}
+          placeholder="Te egy segítőkész asszisztens vagy..."
+          rows={4}
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          Hangnem
+        </label>
+        <select
+          value={settings.ai_tone || 'professional'}
+          onChange={(e) => updateField('ai_tone', e.target.value)}
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        >
+          <option value="professional">Professzionális</option>
+          <option value="friendly">Barátságos</option>
+          <option value="concise">Tömör</option>
+        </select>
+      </div>
+    </div>
+  );
+
+  const renderTheme = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+          Téma
+        </label>
+        <select
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+        >
+          <option value="light">Világos</option>
+          <option value="dark">Sötét</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+          Nyelv
+        </label>
+        <select className="w-full px-3 py-2 rounded border" style={inputStyle}>
+          <option>Magyar</option>
+          <option>English</option>
+        </select>
+      </div>
+    </div>
+  );
+
+  const renderNotifications = () => (
+    <div className="space-y-3">
+      {[
+        { key: 'notif_email', label: 'Email értesítések' },
+        { key: 'notif_push', label: 'Push értesítések' },
+        { key: 'notif_process_updates', label: 'Folyamat frissítések' },
+        { key: 'notif_weekly_summary', label: 'Heti összefoglaló' },
+      ].map((item) => (
+        <div key={item.key} className="flex items-center justify-between">
+          <span style={{ color: 'var(--text-primary)' }}>{item.label}</span>
+          <input
+            type="checkbox"
+            checked={settings[item.key] === 'true'}
+            onChange={(e) => updateField(item.key, e.target.checked ? 'true' : 'false')}
+            className="w-5 h-5"
+          />
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderKnowledge = () => (
+    <div className="space-y-4">
+      <p style={{ color: 'var(--text-secondary)' }}>
+        Tudásbázis beállítások és dokumentum feldolgozás konfigurálása.
+      </p>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          Chunk méret (karakter)
+        </label>
+        <input
+          type="number"
+          value={settings.knowledge_chunk_size || ''}
+          onChange={(e) => updateField('knowledge_chunk_size', e.target.value)}
+          placeholder="1000"
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          Chunk átfedés (karakter)
+        </label>
+        <input
+          type="number"
+          value={settings.knowledge_chunk_overlap || ''}
+          onChange={(e) => updateField('knowledge_chunk_overlap', e.target.value)}
+          placeholder="200"
+          className="w-full px-3 py-2 rounded border"
+          style={inputStyle}
+        />
+      </div>
+    </div>
+  );
+
+  const renderStatuses = () => (
+    <div className="space-y-4">
+      <p style={{ color: 'var(--text-secondary)' }}>
+        Folyamat státuszok kezelése. Az itt definiált státuszok jelennek meg a folyamatok kezelésénél.
+      </p>
+      <div className="space-y-2">
+        {['Tervezés', 'Fejlesztés', 'Tesztelés', 'Review', 'Kész'].map((name) => (
+          <div
+            key={name}
+            className="flex items-center justify-between px-3 py-2 rounded border"
+            style={cardStyle}
+          >
+            <span style={{ color: 'var(--text-primary)' }}>{name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderProcesses = () => (
+    <div className="space-y-4">
+      <p style={{ color: 'var(--text-secondary)' }}>
+        Folyamat típusok és sablonok kezelése.
+      </p>
+      <div className="space-y-2">
+        {['Számlázás', 'HR folyamatok', 'IT karbantartás', 'Beszerzés'].map((name) => (
+          <div
+            key={name}
+            className="flex items-center justify-between px-3 py-2 rounded border"
+            style={cardStyle}
+          >
+            <span style={{ color: 'var(--text-primary)' }}>{name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const tabContent = {
+    general: renderGeneral,
+    ai: renderAI,
+    theme: renderTheme,
+    notifications: renderNotifications,
+    knowledge: renderKnowledge,
+    statuses: renderStatuses,
+    processes: renderProcesses,
+  };
 
   return (
     <div className="space-y-6">
-      <div
-        className="rounded-lg p-8 border text-center"
-        style={{
-          backgroundColor: 'var(--bg-card)',
-          borderColor: 'var(--border-color)',
-        }}
-      >
-        <div className="text-6xl mb-4">⚙️</div>
-        <h1 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
           Beállítások
         </h1>
-        <p className="text-lg mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Rendszer és felhasználói beállítások konfigurálása
-        </p>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-4 py-2 rounded font-medium transition-colors"
+          style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+        >
+          {saving ? 'Mentés...' : 'Mentés'}
+        </button>
       </div>
 
-      {/* Settings sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Profile settings */}
-        <div
-          className="rounded-lg p-6 border"
-          style={{
-            backgroundColor: 'var(--bg-card)',
-            borderColor: 'var(--border-color)',
-          }}
-        >
-          <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Profil Beállítások
-          </h2>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                Név
-              </label>
-              <input
-                type="text"
-                placeholder="Teljes név"
-                className="w-full px-3 py-2 rounded border"
-                style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderColor: 'var(--border-color)',
-                  color: 'var(--text-primary)',
-                }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                Email
-              </label>
-              <input
-                type="email"
-                placeholder="email@example.com"
-                className="w-full px-3 py-2 rounded border"
-                style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderColor: 'var(--border-color)',
-                  color: 'var(--text-primary)',
-                }}
-              />
-            </div>
-          </div>
-        </div>
+      {/* Tabs */}
+      <div
+        className="flex flex-wrap gap-1 border-b"
+        style={{ borderColor: 'var(--border-color)' }}
+      >
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className="px-4 py-2 text-sm font-medium transition-colors rounded-t"
+            style={{
+              backgroundColor: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
+              color: activeTab === tab.id ? 'var(--accent)' : 'var(--text-secondary)',
+              borderBottom: activeTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Notification settings */}
-        <div
-          className="rounded-lg p-6 border"
-          style={{
-            backgroundColor: 'var(--bg-card)',
-            borderColor: 'var(--border-color)',
-          }}
-        >
-          <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Értesítések
-          </h2>
-          <div className="space-y-3">
-            {[
-              { label: 'Email értesítések', checked: true },
-              { label: 'Push értesítések', checked: false },
-              { label: 'Folyamat frissítések', checked: true },
-              { label: 'Heti összefoglaló', checked: true },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <span style={{ color: 'var(--text-primary)' }}>{item.label}</span>
-                <input
-                  type="checkbox"
-                  defaultChecked={item.checked}
-                  className="w-5 h-5"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Theme settings */}
-        <div
-          className="rounded-lg p-6 border"
-          style={{
-            backgroundColor: 'var(--bg-card)',
-            borderColor: 'var(--border-color)',
-          }}
-        >
-          <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Megjelenés
-          </h2>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                Téma
-              </label>
-              <select
-                className="w-full px-3 py-2 rounded border"
-                style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderColor: 'var(--border-color)',
-                  color: 'var(--text-primary)',
-                }}
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-              >
-                <option value="light">Világos</option>
-                <option value="dark">Sötét</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                Nyelv
-              </label>
-              <select
-                className="w-full px-3 py-2 rounded border"
-                style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderColor: 'var(--border-color)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                <option>Magyar</option>
-                <option>English</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Security settings */}
-        <div
-          className="rounded-lg p-6 border"
-          style={{
-            backgroundColor: 'var(--bg-card)',
-            borderColor: 'var(--border-color)',
-          }}
-        >
-          <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Biztonság
-          </h2>
-          <div className="space-y-3">
-            <button
-              className="w-full px-4 py-2 rounded font-medium transition-colors"
-              style={{
-                backgroundColor: 'var(--accent)',
-                color: 'white',
-              }}
-            >
-              Jelszó Módosítása
-            </button>
-            <button
-              className="w-full px-4 py-2 rounded font-medium transition-colors border"
-              style={{
-                backgroundColor: 'var(--bg-secondary)',
-                borderColor: 'var(--border-color)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              Két Faktoros Hitelesítés
-            </button>
-            <button
-              className="w-full px-4 py-2 rounded font-medium transition-colors border"
-              style={{
-                backgroundColor: 'var(--bg-secondary)',
-                borderColor: 'var(--border-color)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              Munkamenetek Kezelése
-            </button>
-          </div>
-        </div>
+      {/* Tab content */}
+      <div className="rounded-lg p-6 border" style={cardStyle}>
+        {tabContent[activeTab]()}
       </div>
     </div>
   );

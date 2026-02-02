@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
 
@@ -8,6 +9,7 @@ const Layout = () => {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <Toaster position="top-right" />
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} />
 

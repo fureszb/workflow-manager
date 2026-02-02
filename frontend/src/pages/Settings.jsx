@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../store/ThemeContext';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import { GripVertical, Trash2, Plus } from 'lucide-react';
 
 const TABS = [
   { id: 'general', label: 'Általános' },
@@ -30,11 +31,28 @@ const Settings = () => {
   const [settings, setSettings] = useState({});
   const [saving, setSaving] = useState(false);
 
+  // Statuses state
+  const [statuses, setStatuses] = useState([]);
+  const [newStatus, setNewStatus] = useState({ name: '', color: '#6b7280' });
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', color: '' });
+  const [dragIdx, setDragIdx] = useState(null);
+
   useEffect(() => {
     api.get('/v1/settings').then((res) => {
       setSettings(res.data);
     }).catch(() => {});
   }, []);
+
+  const loadStatuses = useCallback(() => {
+    api.get('/v1/statuses').then((res) => {
+      setStatuses(res.data);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    loadStatuses();
+  }, [loadStatuses]);
 
   const updateField = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -49,6 +67,71 @@ const Settings = () => {
       toast.error('Hiba a mentés során!');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateStatus = async () => {
+    if (!newStatus.name.trim()) return;
+    try {
+      await api.post('/v1/statuses', {
+        name: newStatus.name,
+        color: newStatus.color,
+        order: statuses.length,
+      });
+      setNewStatus({ name: '', color: '#6b7280' });
+      loadStatuses();
+      toast.success('Státusz létrehozva!');
+    } catch {
+      toast.error('Hiba a státusz létrehozásakor!');
+    }
+  };
+
+  const handleUpdateStatus = async (id) => {
+    try {
+      await api.put(`/v1/statuses/${id}`, editForm);
+      setEditingId(null);
+      loadStatuses();
+      toast.success('Státusz frissítve!');
+    } catch {
+      toast.error('Hiba a státusz frissítésekor!');
+    }
+  };
+
+  const handleDeleteStatus = async (id) => {
+    try {
+      await api.delete(`/v1/statuses/${id}`);
+      loadStatuses();
+      toast.success('Státusz törölve!');
+    } catch (err) {
+      const msg = err.response?.status === 409
+        ? 'A státusz használatban van, nem törölhető!'
+        : 'Hiba a státusz törlésekor!';
+      toast.error(msg);
+    }
+  };
+
+  const handleDragStart = (idx) => {
+    setDragIdx(idx);
+  };
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    const updated = [...statuses];
+    const [moved] = updated.splice(dragIdx, 1);
+    updated.splice(idx, 0, moved);
+    setStatuses(updated);
+    setDragIdx(idx);
+  };
+
+  const handleDragEnd = async () => {
+    setDragIdx(null);
+    try {
+      await api.put('/v1/statuses/reorder', statuses.map((s) => s.id));
+      toast.success('Sorrend mentve!');
+    } catch {
+      toast.error('Hiba a sorrend mentésekor!');
+      loadStatuses();
     }
   };
 
@@ -284,16 +367,118 @@ const Settings = () => {
       <p style={{ color: 'var(--text-secondary)' }}>
         Folyamat státuszok kezelése. Az itt definiált státuszok jelennek meg a folyamatok kezelésénél.
       </p>
-      <div className="space-y-2">
-        {['Tervezés', 'Fejlesztés', 'Tesztelés', 'Review', 'Kész'].map((name) => (
+
+      {/* Status list with drag & drop */}
+      <div className="space-y-2" data-testid="status-list">
+        {statuses.map((status, idx) => (
           <div
-            key={name}
-            className="flex items-center justify-between px-3 py-2 rounded border"
-            style={cardStyle}
+            key={status.id}
+            draggable
+            onDragStart={() => handleDragStart(idx)}
+            onDragOver={(e) => handleDragOver(e, idx)}
+            onDragEnd={handleDragEnd}
+            className="flex items-center gap-3 px-3 py-2 rounded border cursor-grab"
+            style={{
+              ...cardStyle,
+              opacity: dragIdx === idx ? 0.5 : 1,
+            }}
+            data-testid={`status-item-${status.id}`}
           >
-            <span style={{ color: 'var(--text-primary)' }}>{name}</span>
+            <GripVertical size={16} style={{ color: 'var(--text-secondary)' }} />
+            <span
+              className="w-6 h-6 rounded-full flex-shrink-0"
+              style={{ backgroundColor: status.color }}
+            />
+            {editingId === status.id ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                  className="px-2 py-1 rounded border flex-1"
+                  style={inputStyle}
+                  data-testid="edit-status-name"
+                />
+                <input
+                  type="color"
+                  value={editForm.color}
+                  onChange={(e) => setEditForm((f) => ({ ...f, color: e.target.value }))}
+                  className="w-8 h-8 rounded cursor-pointer"
+                  data-testid="edit-status-color"
+                />
+                <button
+                  onClick={() => handleUpdateStatus(status.id)}
+                  className="px-3 py-1 rounded text-sm font-medium"
+                  style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                >
+                  Mentés
+                </button>
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="px-3 py-1 rounded text-sm"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  Mégse
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between flex-1">
+                <span
+                  className="cursor-pointer"
+                  style={{ color: 'var(--text-primary)' }}
+                  onClick={() => {
+                    setEditingId(status.id);
+                    setEditForm({ name: status.name, color: status.color });
+                  }}
+                  data-testid={`status-name-${status.id}`}
+                >
+                  {status.name}
+                </span>
+                <button
+                  onClick={() => handleDeleteStatus(status.id)}
+                  className="p-1 rounded hover:bg-red-100 transition-colors"
+                  title="Törlés"
+                  data-testid={`delete-status-${status.id}`}
+                >
+                  <Trash2 size={16} className="text-red-500" />
+                </button>
+              </div>
+            )}
           </div>
         ))}
+      </div>
+
+      {/* New status form */}
+      <div
+        className="flex items-center gap-3 px-3 py-3 rounded border"
+        style={cardStyle}
+        data-testid="new-status-form"
+      >
+        <Plus size={16} style={{ color: 'var(--text-secondary)' }} />
+        <input
+          type="text"
+          value={newStatus.name}
+          onChange={(e) => setNewStatus((s) => ({ ...s, name: e.target.value }))}
+          placeholder="Új státusz neve..."
+          className="px-2 py-1 rounded border flex-1"
+          style={inputStyle}
+          data-testid="new-status-name"
+        />
+        <input
+          type="color"
+          value={newStatus.color}
+          onChange={(e) => setNewStatus((s) => ({ ...s, color: e.target.value }))}
+          className="w-8 h-8 rounded cursor-pointer"
+          data-testid="new-status-color"
+        />
+        <button
+          onClick={handleCreateStatus}
+          className="px-4 py-1 rounded text-sm font-medium"
+          style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+          data-testid="add-status-btn"
+        >
+          Hozzáadás
+        </button>
       </div>
     </div>
   );

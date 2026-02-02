@@ -1,35 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from './store/ThemeContext';
+import Layout from './components/layout/Layout';
+import Dashboard from './pages/Dashboard';
+import Processes from './pages/Processes';
+import Emails from './pages/Emails';
+import Documents from './pages/Documents';
+import Chat from './pages/Chat';
+import Ideas from './pages/Ideas';
+import Statistics from './pages/Statistics';
+import Settings from './pages/Settings';
+import AuditLog from './pages/AuditLog';
+import Scripts from './pages/Scripts';
+import TokenMonitor from './pages/TokenMonitor';
+import Knowledge from './pages/Knowledge';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="processes" element={<Processes />} />
+            <Route path="emails" element={<Emails />} />
+            <Route path="documents" element={<Documents />} />
+            <Route path="chat" element={<Chat />} />
+            <Route path="ideas" element={<Ideas />} />
+            <Route path="statistics" element={<Statistics />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="audit-log" element={<AuditLog />} />
+            <Route path="scripts" element={<Scripts />} />
+            <Route path="token-monitor" element={<TokenMonitor />} />
+            <Route path="knowledge" element={<Knowledge />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
+  );
 }
 
-export default App
+export default App;

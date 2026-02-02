@@ -1,6 +1,16 @@
+import { NavLink } from 'react-router-dom';
 import { useTheme } from '../../store/ThemeContext';
+import { Sun, Moon, Bell, Settings, PanelLeftClose, PanelLeft } from 'lucide-react';
 
-const TopNavbar = ({ onMenuClick, pageTitle }) => {
+const mainMenuItems = [
+  { path: '/', label: 'Dashboard' },
+  { path: '/processes', label: 'Folyamatok' },
+  { path: '/emails', label: 'Emailek' },
+  { path: '/documents', label: 'Dokumentumok' },
+  { path: '/chat', label: 'Chat' },
+];
+
+const TopNavbar = ({ onSidebarToggle, sidebarOpen }) => {
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -11,104 +21,82 @@ const TopNavbar = ({ onMenuClick, pageTitle }) => {
         borderColor: 'var(--border-color)',
       }}
     >
-      <div className="flex items-center justify-between px-4 py-3">
-        {/* Left section */}
-        <div className="flex items-center gap-4">
-          {/* Hamburger menu */}
+      <div className="flex items-center justify-between px-4 py-2">
+        {/* Left: Logo + sidebar toggle */}
+        <div className="flex items-center gap-3 min-w-[200px]">
           <button
-            onClick={onMenuClick}
-            className="lg:hidden p-2 rounded-lg hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
+            onClick={onSidebarToggle}
+            className="p-2 rounded-lg hover:bg-gray-500/10 transition-colors"
             style={{ color: 'var(--text-primary)' }}
-            aria-label="Toggle menu"
+            aria-label="Toggle sidebar"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
+            {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
           </button>
-
-          {/* Page title */}
-          <h2
-            className="text-xl font-semibold"
+          <span
+            className="text-lg font-bold tracking-tight"
             style={{ color: 'var(--text-primary)' }}
           >
-            {pageTitle}
-          </h2>
+            WorkFlow Manager
+          </span>
         </div>
 
-        {/* Right section */}
-        <div className="flex items-center gap-2">
-          {/* Theme toggle */}
+        {/* Center: Main menu */}
+        <nav className="flex items-center gap-1">
+          {mainMenuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) =>
+                `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? ''
+                    : 'hover:bg-gray-500/10'
+                }`
+              }
+              style={({ isActive }) => ({
+                backgroundColor: isActive ? 'var(--accent)' : 'transparent',
+                color: isActive ? 'white' : 'var(--text-secondary)',
+              })}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1 min-w-[200px] justify-end">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-500/10 transition-colors"
             style={{ color: 'var(--text-primary)' }}
             aria-label="Toggle theme"
           >
-            {theme === 'light' ? (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-            )}
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
 
-          {/* Notifications */}
           <button
-            className="p-2 rounded-lg hover:bg-opacity-10 hover:bg-gray-500 transition-colors relative"
+            className="p-2 rounded-lg hover:bg-gray-500/10 transition-colors relative"
             style={{ color: 'var(--text-primary)' }}
             aria-label="Notifications"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
+            <Bell size={18} />
             <span
-              className="absolute top-1 right-1 w-2 h-2 rounded-full"
+              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
               style={{ backgroundColor: 'var(--danger)' }}
             />
           </button>
+
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `p-2 rounded-lg hover:bg-gray-500/10 transition-colors ${isActive ? 'bg-gray-500/10' : ''}`
+            }
+            style={{ color: 'var(--text-primary)' }}
+            aria-label="Settings"
+          >
+            <Settings size={18} />
+          </NavLink>
         </div>
       </div>
     </header>

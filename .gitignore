@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.egg
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Storage data (keep structure, ignore contents)
+storage/documents/*
+storage/versions/*
+storage/knowledge_base/*
+storage/emails/*
+storage/pst_imports/*
+storage/task_files/*
+storage/script_outputs/*
+storage/exports/*
+storage/faiss_index/*
+!storage/**/.gitkeep
+
+# Test results
+test-results/
+playwright-report/

@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+langchain
+faiss-cpu
+pypdf2
+python-docx
+openpyxl
+httpx
+apscheduler
+websockets
+pypff

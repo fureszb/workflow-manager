@@ -77,7 +77,7 @@ const TokenMonitor = () => {
             <div className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
               / {stat.limit}
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-color)' }}>
               <div
                 className="h-2 rounded-full transition-all"
                 style={{
@@ -117,7 +117,7 @@ const TokenMonitor = () => {
                   {item.tokens.toLocaleString()} tokens ({item.percentage}%)
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-color)' }}>
                 <div
                   className="h-2 rounded-full transition-all"
                   style={{

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../utils/api';
 
 const ThemeContext = createContext();
 
@@ -16,17 +17,39 @@ export const ThemeProvider = ({ children }) => {
     return saved || 'light';
   });
 
+  // Load theme from backend on mount
+  useEffect(() => {
+    api.get('/v1/settings/theme')
+      .then((res) => {
+        if (res.data.value) {
+          setTheme(res.data.value);
+        }
+      })
+      .catch(() => {
+        // Backend unavailable, use localStorage fallback
+      });
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setTheme((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      api.put('/v1/settings/theme', { value: next }).catch(() => {});
+      return next;
+    });
+  };
+
+  const setThemeValue = (value) => {
+    setTheme(value);
+    api.put('/v1/settings/theme', { value }).catch(() => {});
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme: setThemeValue }}>
       {children}
     </ThemeContext.Provider>
   );

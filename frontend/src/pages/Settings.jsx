@@ -1,4 +1,8 @@
+import { useTheme } from '../store/ThemeContext';
+
 const Settings = () => {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div className="space-y-6">
       <div
@@ -117,10 +121,11 @@ const Settings = () => {
                   borderColor: 'var(--border-color)',
                   color: 'var(--text-primary)',
                 }}
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
               >
-                <option>Világos</option>
-                <option>Sötét</option>
-                <option>Automatikus</option>
+                <option value="light">Világos</option>
+                <option value="dark">Sötét</option>
               </select>
             </div>
             <div>

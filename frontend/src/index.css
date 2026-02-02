@@ -5,6 +5,7 @@
 :root {
   --bg-primary: #f8f9fa;
   --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
   --bg-sidebar: #1e293b;
   --text-primary: #1a1a2e;
   --text-secondary: #6b7280;
@@ -14,11 +15,13 @@
   --accent-hover: #2563eb;
   --danger: #ef4444;
   --success: #22c55e;
+  --warning: #f59e0b;
 }
 
 [data-theme="dark"] {
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
   --bg-sidebar: #0f172a;
   --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
@@ -28,6 +31,7 @@
   --accent-hover: #2563eb;
   --danger: #ef4444;
   --success: #22c55e;
+  --warning: #f59e0b;
 }
 
 body {

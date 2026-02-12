@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = str(Path(__file__).resolve().parent.parent.parent.parent / "storage" / "uploads")
     KNOWLEDGE_DIR: str = str(Path(__file__).resolve().parent.parent.parent.parent / "storage" / "knowledge")
     SCRIPTS_DIR: str = str(Path(__file__).resolve().parent.parent.parent.parent / "storage" / "scripts")
+    SCRIPT_OUTPUTS_DIR: str = str(Path(__file__).resolve().parent.parent.parent.parent / "storage" / "script_outputs")
     FAISS_INDEX_DIR: str = str(Path(__file__).resolve().parent.parent.parent.parent / "storage" / "faiss_index")
+    EMAIL_ATTACHMENTS_DIR: str = str(Path(__file__).resolve().parent.parent.parent.parent / "storage" / "emails")
 
     MAX_FILE_VERSIONS: int = 2
     AUDIT_LOG_RETENTION_DAYS: int = 365

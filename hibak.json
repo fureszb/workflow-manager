@@ -1,0 +1,114 @@
+{
+  "name": "Workflow Manager - Frontend Playwright Fix",
+  "description": "Fix 83 failing Playwright tests where body is hidden and UI elements are not rendering correctly.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Fix Playwright baseURL configuration",
+      "description": "Ensure Playwright uses the correct baseURL and auto-starts Vite dev server.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "baseURL is http://localhost:5173",
+        "webServer runs npm run dev",
+        "reuseExistingServer is true"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-002",
+      "title": "Fix Vite proxy configuration",
+      "description": "Ensure Vite forwards API requests to backend on port 8000.",
+      "priority": "high",
+      "acceptanceCriteria": [
+        "server.proxy forwards /api",
+        "Target is http://localhost:8000",
+        "Frontend communicates with backend"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-003",
+      "title": "Ensure React root renders App",
+      "description": "Fix runtime errors blocking rendering.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "createRoot(...).render(<App />) executes",
+        "No JS runtime error",
+        "Body visible in tests"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-004",
+      "title": "Fix Documents page rendering",
+      "description": "Ensure /documents renders correctly.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "Route /documents exists",
+        "h1 'Dokumentumok' visible",
+        "file-input testid exists",
+        "toggle-filters-btn testid exists"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-005",
+      "title": "Fix Settings page rendering",
+      "description": "Ensure /settings renders correctly.",
+      "priority": "high",
+      "acceptanceCriteria": [
+        "Route /settings exists",
+        "h1 'Beállítások' visible"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-006",
+      "title": "Add required data-testid attributes",
+      "description": "Ensure required elements contain correct test IDs.",
+      "priority": "high",
+      "acceptanceCriteria": [
+        "toggle-filters-btn exists",
+        "file-input exists",
+        "upload-category-select exists",
+        "Knowledge tab text is 'Tudásbázis'"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-007",
+      "title": "Remove CSS hiding body",
+      "description": "Fix CSS or logic hiding body element.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "No body display:none",
+        "No hidden attribute on body",
+        "Playwright sees body visible"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-008",
+      "title": "All Playwright tests pass",
+      "description": "Ensure entire Playwright suite passes.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "0 failing tests",
+        "No timeout failures",
+        "No rendering errors"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    }
+  ],
+  "metadata": {
+    "updatedAt": "2026-02-12T09:55:21.247Z"
+  }
+}

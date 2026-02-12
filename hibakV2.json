@@ -1,0 +1,138 @@
+{
+  "name": "Workflow Manager - Full Frontend Diagnostic & Repair",
+  "description": "Perform a full frontend functional audit. Test all buttons, routes, click handlers, API calls, forms, uploads and interactive components. Fix any non-working functionality and ensure full Playwright coverage.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Audit all frontend routes",
+      "description": "Verify that all routes render correctly and load without runtime errors.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "All routes render without blank screen",
+        "No console errors",
+        "No unhandled promise rejections",
+        "Each route displays expected heading"
+      ],
+      "passes": true,
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-002",
+      "title": "Test all buttons and click handlers",
+      "description": "Programmatically test every button in the application and verify correct behavior.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "Every button has onClick handler",
+        "Clicking buttons triggers expected state change or API call",
+        "No button click results in silent failure",
+        "No console error after click"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-003",
+      "title": "Validate all API integrations",
+      "description": "Ensure frontend communicates correctly with backend endpoints.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "All fetch/axios calls hit correct backend endpoint",
+        "HTTP errors are handled properly",
+        "Loading states implemented",
+        "Error messages displayed on failure"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-004",
+      "title": "Fix non-working forms",
+      "description": "Validate and repair all forms including uploads and settings.",
+      "priority": "high",
+      "acceptanceCriteria": [
+        "All forms submit correctly",
+        "Validation errors displayed properly",
+        "Successful submissions update UI",
+        "No frozen loading state"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-005",
+      "title": "Fix document upload flow",
+      "description": "Ensure file upload component works fully.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "File input triggers upload",
+        "Correct API endpoint called",
+        "Upload progress handled",
+        "Uploaded document appears in UI list"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-006",
+      "title": "Verify state management consistency",
+      "description": "Ensure React state updates correctly after user interactions.",
+      "priority": "high",
+      "acceptanceCriteria": [
+        "No stale state issues",
+        "UI updates immediately after API success",
+        "No inconsistent re-render behavior"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-007",
+      "title": "Add comprehensive Playwright coverage",
+      "description": "Create or update Playwright tests to simulate real user interactions.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "Each route has navigation test",
+        "Each button has interaction test",
+        "Each form has submit test",
+        "Each API flow validated",
+        "No failing Playwright tests"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-008",
+      "title": "Detect and fix runtime errors",
+      "description": "Scan application for JS runtime errors and fix root causes.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "No console.error in browser",
+        "No React error boundary triggered",
+        "No TypeError or undefined access"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-009",
+      "title": "Implement global error handling",
+      "description": "Add robust error handling for async operations.",
+      "priority": "high",
+      "acceptanceCriteria": [
+        "All async calls wrapped in try/catch",
+        "User sees error feedback",
+        "No silent failures"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-010",
+      "title": "Final functional verification",
+      "description": "Perform full end-to-end verification of the entire frontend.",
+      "priority": "critical",
+      "acceptanceCriteria": [
+        "All Playwright tests pass",
+        "Manual testing confirms working UI",
+        "All interactive components functional",
+        "Frontend stable under repeated interactions"
+      ],
+      "passes": false
+    }
+  ],
+  "metadata": {
+    "updatedAt": "2026-02-12T10:34:59.093Z"
+  }
+}

@@ -32,3 +32,13 @@ application.dependency_overrides[get_db] = override_get_db
 @pytest.fixture()
 def client():
     return TestClient(application)
+
+
+@pytest.fixture()
+def db_session():
+    """Provide a database session for tests that need direct DB access."""
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

@@ -64,6 +64,8 @@ class ProcessInstance(Base):
     month = Column(Integer, nullable=False)
     status_id = Column(Integer, ForeignKey("status_definitions.id"))
     notes = Column(Text)
+    quick_guide = Column(Text)  # Per-instance quick guide (overrides process_type default)
+    quick_guide_ai_draft = Column(Text)  # AI-generated draft for quick guide
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
@@ -106,6 +108,7 @@ class Document(Base):
     file_type = Column(String(10))
     file_size = Column(Integer)
     category = Column(String(255))
+    summary = Column(Text)  # AI-generated summary
     is_knowledge = Column(Boolean, default=False)
     version = Column(Integer, default=1)
     parent_id = Column(Integer, ForeignKey("documents.id"))
@@ -145,6 +148,7 @@ class Email(Base):
     process_instance_id = Column(Integer, ForeignKey("process_instances.id"))
     ai_category = Column(String(255))
     ai_summary = Column(Text)
+    ai_importance_reason = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
 
     process_instance = relationship("ProcessInstance")
@@ -170,6 +174,7 @@ class EmailTaskLink(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     email_id = Column(Integer, ForeignKey("emails.id"), nullable=False)
     process_instance_id = Column(Integer, ForeignKey("process_instances.id"), nullable=False)
+    ai_confidence = Column(Float, nullable=True)  # AI confidence score (0-1) for auto-linked emails
     created_at = Column(DateTime, server_default=func.now())
 
     email = relationship("Email", back_populates="task_links")
@@ -296,6 +301,17 @@ class AIKnowledgeLog(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     document = relationship("Document")
+
+
+# --- AI Personality Change Log ---
+class PersonalityChangeLog(Base):
+    __tablename__ = "personality_change_log"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    provider = Column(String(20), nullable=False)
+    field_changed = Column(String(100), nullable=False)
+    old_value = Column(Text)
+    new_value = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
 
 
 # --- Settings ---

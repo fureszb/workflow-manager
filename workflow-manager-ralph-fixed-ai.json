@@ -1,0 +1,1006 @@
+{
+  "name": "WorkFlow Manager",
+  "description": "Lokális webalkalmazás havi munkafolyamatok kezelésére, AI-alapú dokumentumelemzéssel, email menedzsmenttel, projektkövetéssel és Python script integrációval",
+  "branchName": "ralph/workflow-manager",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Monorepo projekt struktúra létrehozása",
+      "description": "As a developer, I want a clean monorepo project structure so that backend and frontend code is organized and ready for development.",
+      "acceptanceCriteria": [
+        "`/home/bencelinux/workflow-manager/backend/` mappa létrehozva Python FastAPI projekttel",
+        "`/home/bencelinux/workflow-manager/frontend/` mappa létrehozva Vite + React projekttel",
+        "`/home/bencelinux/workflow-manager/tests/` mappa létrehozva Playwright konfigurációval",
+        "`/home/bencelinux/workflow-manager/storage/` mappa struktúra létrehozva (documents, versions, knowledge_base, emails, pst_imports, task_files, script_outputs, exports, faiss_index almappák)",
+        "Backend: FastAPI app factory, requirements.txt / pyproject.toml a megadott csomagokkal (fastapi, uvicorn, sqlalchemy, alembic, langchain, faiss-cpu, pypdf2, python-docx, openpyxl, httpx, apscheduler, websockets, pypff)",
+        "Frontend: package.json a megadott csomagokkal (react, react-dom, react-router-dom, tailwindcss, recharts, zustand, @tanstack/react-query, axios, @dnd-kit/core, @dnd-kit/sortable, lucide-react, react-hot-toast)",
+        "Tailwind CSS konfigurálva dark mode támogatással (class stratégia)",
+        "`.gitignore` fájl backend és frontend-hez",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [],
+      "priority": 1,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-002",
+      "title": "MySQL adatbázis séma és Alembic migrációk",
+      "description": "As a developer, I want the complete database schema with Alembic migrations so that the database is version-controlled and reproducible.",
+      "acceptanceCriteria": [
+        "SQLAlchemy modellek létrehozva minden táblához: processes, monthly_tasks, task_statuses, task_comments, task_files, documents, document_chunks, emails, email_attachments, email_task_links, chat_conversations, chat_messages, ideas, token_usage, ai_personality, ai_knowledge_log, audit_log, python_scripts, script_runs, dashboard_layout, settings",
+        "Alembic init és első migráció generálva",
+        "`alembic upgrade head` sikeresen lefut és létrehozza a táblákat",
+        "Seed data: 5 alapértelmezett státusz (Tervezés, Fejlesztés, Tesztelés, Review, Kész), 5 folyamat sablon, alapértelmezett settings értékek",
+        "MySQL connection string konfigurálható `.env` fájlból",
+        "Adatbázis user: `testuser@localhost` jelszó: `1122`",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-001"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-003",
+      "title": "FastAPI alap és CORS konfiguráció",
+      "description": "As a developer, I want the FastAPI application base with proper CORS and routing so that the frontend can communicate with the backend.",
+      "acceptanceCriteria": [
+        "FastAPI app létrehozva `/api/v1` prefix-szel",
+        "CORS engedélyezve localhost:5173 (Vite dev server) számára",
+        "Router struktúra: dashboard, processes, monthly_tasks, statuses, documents, emails, chat, ideas, statistics, scripts, ai_settings, settings, audit, tokens",
+        "Health check endpoint (`GET /api/v1/health`) működik",
+        "Uvicorn indítás konfigurálva (port 8000)",
+        "Swagger UI elérhető `/docs` alatt",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-002"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-004",
+      "title": "Frontend alap layout - Top navbar + Sidebar",
+      "description": "As a user, I want a clean navigation layout with top navbar and collapsible sidebar so that I can easily navigate between all pages.",
+      "acceptanceCriteria": [
+        "Top navbar: bal oldalon \"WorkFlow Manager\" logo/név, középen fő menü elemek (Dashboard, Folyamatok, Emailek, Dokumentumok, Chat), jobb oldalon sötét/világos mód toggle + értesítések ikon + beállítások ikon",
+        "Collapsible sidebar: az aktuális oldalhoz tartozó almenük (pl. Folyamatok → Havi nézet, Archívum)",
+        "A sidebar további menüelemeket tartalmaz: Ötletek, Statisztikák, Scriptek, Token Monitor, Tudásbázis, Audit Log",
+        "React Router v6 routing konfigurálva minden oldalhoz",
+        "Aktív menüpont kiemelése",
+        "Tailwind CSS alapú responsive layout (desktop-only)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-003"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-005",
+      "title": "Sötét/Világos mód implementálás",
+      "description": "As a user, I want to toggle between dark and light themes so that I can work comfortably in any lighting condition.",
+      "acceptanceCriteria": [
+        "Header-ben nap/hold ikon toggle gomb",
+        "Tailwind CSS `dark:` prefix használata minden komponensben",
+        "Téma beállítás mentése a settings táblába (`theme` key)",
+        "Oldal betöltéskor a mentett téma alkalmazása",
+        "Minden szöveg, háttér, kártya, input mező, táblázat megfelelően jelenik meg mindkét módban",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-004"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-006",
+      "title": "Settings CRUD API és beállítások oldal",
+      "description": "As a user, I want a settings page with multiple tabs so that I can configure the application.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/settings` - összes beállítás lekérés",
+        "`PUT /api/v1/settings` - beállítások mentés",
+        "Frontend: Beállítások oldal 7 tab-bal (Általános, AI Személyiség, Téma, Értesítések, Tudásbázis, Státuszok, Folyamatok)",
+        "Általános tab: OpenRouter API kulcs, OpenRouter alapértelmezett modell, Ollama base URL, Ollama modell, Chat kontextus méret, Audit log megőrzés, Automatikus havi feladat generálás toggle",
+        "Beállítások mentése toast notification-nel visszajelezve",
+        "API kulcs mező password típusú (rejtett)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-005"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-007",
+      "title": "Dinamikus státusz kezelés",
+      "description": "As a user, I want to manage custom task statuses so that I can adapt the workflow to my needs.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/statuses` - státuszok listázása (sorrend szerint)",
+        "`POST /api/v1/statuses` - új státusz létrehozása (név, szín, sorrend)",
+        "`PUT /api/v1/statuses/{id}` - státusz szerkesztés",
+        "`DELETE /api/v1/statuses/{id}` - státusz törlés (csak ha nincs használatban)",
+        "`PUT /api/v1/statuses/reorder` - sorrend módosítás",
+        "Frontend: Beállítások → Státuszok tab-on lista, drag & drop sorrend, szín választó, új státusz form, törlés gomb",
+        "Alapértelmezett 5 státusz: Tervezés (szürke), Fejlesztés (kék), Tesztelés (sárga), Review (lila), Kész (zöld)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-006"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-008",
+      "title": "Folyamatok CRUD és havi nézet (Kanban board)",
+      "description": "As a user, I want to see my monthly processes in a Kanban board view so that I can track their status at a glance.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/processes` - 5 folyamat listázása",
+        "`GET /api/v1/monthly-tasks?year=X&month=Y` - havi feladatok lekérése",
+        "`PUT /api/v1/monthly-tasks/{id}` - státusz frissítés",
+        "Frontend: `/processes/monthly` oldalon Kanban board (státusz oszlopok)",
+        "Feladatok kártyaként jelennek meg a megfelelő státusz oszlopban",
+        "Drag & drop státusz váltás (kártya húzása oszlopok között)",
+        "Hónap váltó (előre/hátra nyilak + dátum kijelzés)",
+        "Szűrés státusz szerint",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-007"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-009",
+      "title": "Havi feladatok automatikus és manuális generálása",
+      "description": "As a user, I want monthly tasks to be generated automatically on the 1st of each month so that I don't have to create them manually.",
+      "acceptanceCriteria": [
+        "APScheduler konfiguráció: minden hónap 1-je 00:01-kor fut",
+        "Generálási logika: minden aktív process-hez létrehoz egy monthly_task rekordot (year, month), ha még nem létezik",
+        "Alapértelmezett státusz: \"Tervezés\"",
+        "`POST /api/v1/monthly-tasks/generate` - manuális trigger endpoint",
+        "Dashboard-on \"Új hónap indítása\" gomb",
+        "Duplikáció védelem: ha az adott hónapra már létezik feladat, nem hoz létre újat",
+        "Audit log bejegyzés a generálásról",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-008"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-010",
+      "title": "Folyamat részletek oldal",
+      "description": "As a user, I want a detailed view for each monthly task so that I can manage it with all related information.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/monthly-tasks/{id}` - feladat részletek (process info-val együtt)",
+        "Frontend: `/processes/:id/tasks/:taskId` oldalon:",
+        "Quick guide megjelenítés (AI draft + manuálisan szerkeszthető, WYSIWYG vagy markdown editor)",
+        "Státusz frissítés dropdown",
+        "Fájlok feltöltése/csatolása (drag & drop + tallózás)",
+        "Csatolt fájlok listája letöltés/törlés gombokkal",
+        "Python script indítás gomb (ha van script hozzárendelve a folyamathoz)",
+        "Jegyzetek/kommentek időrendben (hozzáadás form + lista)",
+        "Időbélyegek megjelenítés (kezdés, befejezés)",
+        "Kapcsolódó emailek listája",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-009"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-011",
+      "title": "Folyamatok archívum nézet",
+      "description": "As a user, I want to browse past months' processes so that I can review historical data.",
+      "acceptanceCriteria": [
+        "Frontend: `/processes/archive` oldalon év/hónap fa struktúra",
+        "Év kibontásakor hónapok listája jelenik meg",
+        "Hónap kiválasztásakor az 5 folyamat és azok státusza jelenik meg",
+        "Keresés korábbi folyamatokban (szöveg alapú)",
+        "Éves összesítés: hány feladat készült el az adott évben",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-010"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-012",
+      "title": "Folyamat quick guide AI generálás",
+      "description": "As a user, I want AI to generate a quick guide draft for each process so that I have a starting point for documentation.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/processes/{id}/generate-guide` - AI quick guide generálás",
+        "A feltöltött folyamatleírás dokumentumokból generál összefoglalót",
+        "Az eredmény a `quick_guide_ai_draft` mezőbe kerül",
+        "A felhasználó szerkesztheti és a végleges verziót a `quick_guide` mezőbe menti",
+        "Lokális (Ollama) vagy online (OpenRouter) AI használata a beállítások szerint",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-011"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-013",
+      "title": "Dokumentum feltöltés és listázás",
+      "description": "As a user, I want to upload and manage documents so that all project-related files are organized in one place.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/documents/upload` - multipart fájl feltöltés (PDF, DOCX, XLSX, TXT)",
+        "`GET /api/v1/documents` - dokumentumok listázása (szűrés: típus, kategória, is_knowledge_base)",
+        "`GET /api/v1/documents/{id}` - dokumentum részletek",
+        "`GET /api/v1/documents/{id}/download` - dokumentum letöltés",
+        "`DELETE /api/v1/documents/{id}` - dokumentum törlés",
+        "Frontend: drag & drop + fájl tallózás feltöltés",
+        "Dokumentum lista: név, méret, típus ikon, dátum, kategória, tudásbázis jelölés",
+        "Fájlok fizikailag a `/storage/documents/` mappába kerülnek",
+        "Nincs fájl méret limit",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-012"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-014",
+      "title": "Dokumentum verziózás",
+      "description": "As a user, I want document versioning so that I can recover previous versions when overwriting a file.",
+      "acceptanceCriteria": [
+        "Ha azonos nevű fájlt töltök fel, az előző verzió átkerül a `/storage/documents/versions/` mappába",
+        "Maximum 2 verzió megőrzése (a legrégebbi törlődik)",
+        "`GET /api/v1/documents/{id}/versions` - verziótörténet lekérés",
+        "Frontend: verziótörténet megjelenítés a dokumentum részletekben",
+        "Korábbi verzió letöltése lehetséges",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-013"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-015",
+      "title": "Dokumentum kategóriák és mappák dinamikus kezelése",
+      "description": "As a user, I want to organize documents into dynamic categories so that I can find them easily.",
+      "acceptanceCriteria": [
+        "Kategória/mappa létrehozása feltöltéskor vagy utólag",
+        "`PUT /api/v1/documents/{id}` - kategória módosítás",
+        "Frontend: kategória szűrő dropdown + új kategória létrehozás input",
+        "Kategóriák dinamikusan jönnek létre (nincs előre definiált lista)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-014"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-016",
+      "title": "Dokumentum előnézet és keresés",
+      "description": "As a user, I want to preview documents and search within them so that I can quickly find information.",
+      "acceptanceCriteria": [
+        "PDF inline megjelenítés (iframe/embed)",
+        "DOCX/TXT szöveg megjelenítés a frontend-en",
+        "XLSX táblázat megjelenítés",
+        "`GET /api/v1/documents/search?q=...` - full-text keresés dokumentumok tartalmában",
+        "Keresési eredmények kiemelése",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-015"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-017",
+      "title": "Tudásbázis jelölés dokumentumokon",
+      "description": "As a user, I want to mark specific documents as knowledge base material so that only selected documents are used for AI training.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/documents/{id}/toggle-knowledge` - tudásbázis toggle",
+        "Frontend: csillag ikon a dokumentum listában (kattintásra toggle)",
+        "Csak `is_knowledge_base=true` dokumentumok kerülnek a FAISS indexbe",
+        "Beállítások → Tudásbázis tab-on az összes dokumentum listája toggle gombbal",
+        "Tudásbázishoz adáskor automatikus chunking + embedding generálás",
+        "Eltávolításkor FAISS indexből is törlődik",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-016"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-018",
+      "title": "Ollama (lokális AI) integráció",
+      "description": "As a user, I want to use a local Ollama model for simpler AI tasks so that I don't have to pay for API calls.",
+      "acceptanceCriteria": [
+        "Ollama Python SDK integráció",
+        "Konfiguálható base URL (alapértelmezett: http://localhost:11434)",
+        "Konfiguálható modell (alapértelmezett: ajindal/llama3.1-storm:8b-q4_k_m)",
+        "`POST /api/v1/ai/test-connection` - kapcsolat teszt (ollama provider)",
+        "Chat üzenet küldés Ollama-n keresztül működik",
+        "Token számolás és token_usage táblába mentés",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-017"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-019",
+      "title": "OpenRouter API integráció",
+      "description": "As a user, I want to use OpenRouter API for complex AI tasks so that I can leverage powerful cloud models.",
+      "acceptanceCriteria": [
+        "OpenRouter API client implementálás (httpx)",
+        "API kulcs a settings-ből olvasva",
+        "`GET /api/v1/ai/models/openrouter` - elérhető modellek lekérése az OpenRouter API-ból",
+        "Modell váltás támogatása",
+        "Cost tracking: OpenRouter API-ból automatikus ár lekérés + manuális felülírás lehetőség",
+        "Token számolás és token_usage táblába mentés (cost_usd mezővel)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-018"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-020",
+      "title": "AI provider váltás",
+      "description": "As a user, I want to switch between local and online AI so that I can choose the best tool for each task.",
+      "acceptanceCriteria": [
+        "Chat felületen toggle gomb: Lokális (Ollama) ↔ Online (OpenRouter)",
+        "Online módban modell választó dropdown (OpenRouter modellek listája)",
+        "A választott provider és modell a chat_conversations táblába mentődik",
+        "Beállításokban alapértelmezett provider és modell konfigurálható",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-019"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-021",
+      "title": "RAG pipeline - dokumentum chunking és embedding",
+      "description": "As a developer, I want a RAG pipeline so that the AI can answer questions based on uploaded documents.",
+      "acceptanceCriteria": [
+        "LangChain + FAISS integráció",
+        "Dokumentum szöveg kinyerés: PyPDF2 (PDF), python-docx (DOCX), openpyxl (XLSX), plain text (TXT)",
+        "Hibrid chunking: szemantikus (bekezdés/fejezet határok) + max 500 token limit",
+        "Embedding generálás Ollama-val (lokális)",
+        "FAISS index mentés `/storage/faiss_index/` mappába",
+        "Chunk-ok a document_chunks táblába is mentődnek (backup)",
+        "Csak `is_knowledge_base=true` dokumentumok indexelődnek",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-020"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-022",
+      "title": "AI Chat funkció (multi-turn, streaming)",
+      "description": "As a user, I want an AI chat interface so that I can ask questions about my projects, documents, and emails.",
+      "acceptanceCriteria": [
+        "Frontend: `/chat` oldalon chat ablak (üzenet buborékok, markdown renderelés)",
+        "`POST /api/v1/chat/conversations` - új beszélgetés létrehozása",
+        "`POST /api/v1/chat/conversations/{id}/message` - üzenet küldés",
+        "WebSocket streaming: AI válasz token-by-token megjelenítés",
+        "RAG kontextus: kérdés embedding → FAISS similarity search → top-k chunk → LLM kontextusként",
+        "Multi-turn: teljes beszélgetés history a kontextusban (konfiguálható limit)",
+        "Chat history sidebar: korábbi beszélgetések listája",
+        "Beszélgetés törlése lehetséges",
+        "Quick prompt gombok (sablon kérdések: \"Hol tart az X projekt?\", \"Mi volt az Y utolsó emailje?\", stb.)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-021"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-023",
+      "title": "Chat kontextus és history kezelés",
+      "description": "As a user, I want chat conversations to be saved and searchable so that I can revisit previous Q&A sessions.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/chat/conversations` - beszélgetések listázása",
+        "`GET /api/v1/chat/conversations/{id}` - beszélgetés üzenetei",
+        "`DELETE /api/v1/chat/conversations/{id}` - beszélgetés törlése",
+        "Kontextus méret beállítható (Settings → Általános → Chat kontextus méret)",
+        "Automatikus mentés minden üzenet után",
+        "Beszélgetések visszakereshetők",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-022"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-024",
+      "title": "AI személyiség szerkesztő",
+      "description": "As a user, I want to customize the AI personality for both local and online providers so that it responds in my preferred style.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/ai/personality` - jelenlegi személyiség lekérés",
+        "`PUT /api/v1/ai/personality/{provider}` - személyiség szerkesztés (ollama/openrouter)",
+        "Frontend: Beállítások → AI Személyiség tab, külön szekció lokális és online AI-hoz",
+        "Mezők: Név, System prompt (textarea), Hangnem (dropdown: professional, friendly, concise, detailed), Szakterületek (tag input), Nyelv (dropdown)",
+        "A system prompt minden AI hívásba bekerül",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-023"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-025",
+      "title": "PST email import duplikáció szűréssel",
+      "description": "As a user, I want to import Outlook PST files so that my emails are available in the application without duplicates.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/emails/import-pst` - PST fájl feltöltés és feldolgozás",
+        "pypff/libpff használata PST parsing-hoz",
+        "Minden email `message_id` ellenőrzése - ha már létezik a DB-ben, kihagyja",
+        "Új emailek beszúrása: subject, sender, recipients, body, sent_date, received_date",
+        "Mellékletek mentése `/storage/emails/` mappába",
+        "WebSocket progress event-ek (pst_import.progress) a frontend-nek",
+        "Frontend: PST import gomb, progress bar megjelenítés",
+        "Toast notification import végén",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-024"
+      ],
+      "priority": 25,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-026",
+      "title": "Email lista és szűrők",
+      "description": "As a user, I want to browse and filter imported emails so that I can find relevant communications quickly.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/emails` - email lista (szűrés: dátum tartomány, fontosság, kategória, keresés)",
+        "`GET /api/v1/emails/{id}` - email részletek",
+        "Frontend: email lista táblázat (dátum, feladó, tárgy, fontosság badge, kategória)",
+        "Szűrő sáv: dátum tartomány picker, fontosság dropdown, kategória dropdown, keresés input",
+        "Email részletek panel (kattintásra megnyílik jobb oldalon vagy modal-ban)",
+        "Mellékletek letöltése",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-025"
+      ],
+      "priority": 26,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-027",
+      "title": "Email AI kategorizálás (fontosság)",
+      "description": "As a user, I want AI to categorize email importance so that I can prioritize my communications.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/emails/auto-categorize` - AI automatikus fontosság kategorizálás",
+        "AI a tartalom alapján critical/high/medium/low kategóriába sorolja",
+        "AI megindokolja a döntést (ai_importance_reason mező)",
+        "Frontend: \"AI kategorizálás\" gomb az email listán",
+        "Fontosság manuálisan felülírható",
+        "Beállítható: importkor automatikusan vagy manuális trigger",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-026"
+      ],
+      "priority": 27,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-028",
+      "title": "Email-feladat összerendelés",
+      "description": "As a user, I want to link emails to monthly tasks so that I can track related communications for each process.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/emails/{id}/link-task` - manuális összerendelés",
+        "`DELETE /api/v1/emails/{id}/unlink-task/{taskId}` - összerendelés törlése",
+        "`POST /api/v1/emails/auto-link` - AI automatikus összerendelés (tartalom alapján)",
+        "AI confidence score (0-1) mentése",
+        "Frontend: email részletekben dropdown a feladathoz rendeléshez + \"AI javaslat\" gomb",
+        "Folyamat részletekben a kapcsolódó emailek listája megjelenik",
+        "Beállítható: automatikus vagy jóváhagyás-alapú mód",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-027"
+      ],
+      "priority": 28,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-029",
+      "title": "Python script regisztráció és kezelés",
+      "description": "As a user, I want to register and manage my Python scripts so that I can run them from the web interface.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/scripts` - scriptek listázása",
+        "`POST /api/v1/scripts` - script regisztráció (szerveren lévő path VAGY fájl feltöltés)",
+        "`PUT /api/v1/scripts/{id}` - script szerkesztés",
+        "`DELETE /api/v1/scripts/{id}` - script törlés",
+        "Frontend: `/scripts` oldalon script lista (név, leírás, hozzárendelt folyamat)",
+        "Script hozzárendelés folyamathoz (dropdown)",
+        "Szerveren lévő script path megadása input mezőben",
+        "Vagy fájl feltöltés (a script a `/storage/scripts/` mappába kerül)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-028"
+      ],
+      "priority": 29,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-030",
+      "title": "Python script futtatás real-time log-gal",
+      "description": "As a user, I want to run Python scripts and see their output in real-time so that I can monitor execution.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/scripts/{id}/run` - script futtatás (subprocess.Popen)",
+        "`POST /api/v1/scripts/{id}/cancel` - futó script leállítása",
+        "WebSocket streaming: stdout és stderr real-time küldése (script.output event)",
+        "Script státusz változás WebSocket event (script.status: running/success/failed/cancelled)",
+        "Frontend: \"Futtatás\" gomb, real-time log megjelenítés (terminál-szerű ablak)",
+        "\"Leállítás\" gomb futó script esetén",
+        "Script kimeneti fájlok automatikus csatolása a kapcsolódó feladathoz (ha van monthly_task_id)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-029"
+      ],
+      "priority": 30,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-031",
+      "title": "Script futási előzmények",
+      "description": "As a user, I want to see the history of script executions so that I can review past runs and their results.",
+      "acceptanceCriteria": [
+        "`GET /api/v1/scripts/{id}/runs` - futtatási előzmények listája",
+        "`GET /api/v1/scripts/runs/{runId}` - futtatás részletek (log)",
+        "`GET /api/v1/scripts/runs/{runId}/output-files` - kimeneti fájlok",
+        "Frontend: előzmények táblázat (dátum, státusz, időtartam)",
+        "Log nézet (stdout/stderr korábbi futásokhoz)",
+        "Kimeneti fájlok letöltése",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-030"
+      ],
+      "priority": 31,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-032",
+      "title": "Dashboard widgetek implementálása",
+      "description": "As a user, I want an informative dashboard with draggable widgets so that I get a quick overview of everything.",
+      "acceptanceCriteria": [
+        "Frontend: `/` (főoldal) Dashboard",
+        "Widgetek:",
+        "`GET /api/v1/dashboard` - összesített adatok egy hívással",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-031"
+      ],
+      "priority": 32,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-033",
+      "title": "Dashboard drag & drop widget elrendezés",
+      "description": "As a user, I want to rearrange dashboard widgets by dragging them so that I can customize my view.",
+      "acceptanceCriteria": [
+        "dnd-kit integráció a Dashboard-on",
+        "Widgetek szabadon húzhatók és átrendezhetők",
+        "`GET /api/v1/dashboard/layout` - mentett elrendezés lekérés",
+        "`PUT /api/v1/dashboard/layout` - elrendezés mentés",
+        "Elrendezés automatikusan mentődik átrendezés után",
+        "Oldal betöltésekor a mentett elrendezés töltődik be",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-032"
+      ],
+      "priority": 33,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-034",
+      "title": "Statisztikák oldal grafikonokkal",
+      "description": "As a user, I want to see statistics with charts so that I can analyze process performance and resource usage.",
+      "acceptanceCriteria": [
+        "Frontend: `/statistics` oldal",
+        "Recharts grafikonok:",
+        "Dátum tartomány választó (szűrés periódusra)",
+        "Grafikonok sötét/világos mód támogatással",
+        "`GET /api/v1/statistics/processes`, `GET /api/v1/statistics/emails`, `GET /api/v1/statistics/tokens` endpoint-ok",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-033"
+      ],
+      "priority": 34,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-035",
+      "title": "Statisztikák és riportok exportálás",
+      "description": "As a user, I want to export statistics as PDF and Excel so that I can share reports with others.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/statistics/export` - riport generálás (format: pdf/excel)",
+        "PDF export: grafikonok + táblázatok",
+        "Excel export: nyers adatok munkalapokra bontva",
+        "Frontend: \"Exportálás\" gomb PDF és Excel opciókkal",
+        "Generált fájl letöltése",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-034"
+      ],
+      "priority": 35,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-036",
+      "title": "Token Monitor oldal",
+      "description": "As a user, I want a dedicated token monitoring page so that I can track AI usage costs in detail.",
+      "acceptanceCriteria": [
+        "Frontend: `/token-monitor` oldal",
+        "`GET /api/v1/tokens/usage/daily` - napi bontás (oszlop diagram)",
+        "`GET /api/v1/tokens/usage/monthly` - havi összesítés (terület diagram)",
+        "`GET /api/v1/tokens/usage/by-model` - modell szerinti bontás (kör diagram)",
+        "`GET /api/v1/tokens/cost` - költség kalkuláció",
+        "OpenRouter cost: API-ból automatikus + manuálisan felülírható",
+        "Lokális AI statisztikák (válaszidő, ha elérhető Ollama API-ból)",
+        "Dátum tartomány szűrő",
+        "Összesített költség kijelzés (USD)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-035"
+      ],
+      "priority": 36,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-037",
+      "title": "Ötletek & Javítások oldal",
+      "description": "As a user, I want an ideas board with AI-generated and manual suggestions so that I can continuously improve my workflow.",
+      "acceptanceCriteria": [
+        "Frontend: `/ideas` oldal, kártyás nézet",
+        "`GET /api/v1/ideas` - ötletek listázása (szűrés: status, priority, source)",
+        "`POST /api/v1/ideas` - manuális ötlet hozzáadás (cím, leírás, prioritás)",
+        "`PUT /api/v1/ideas/{id}` - ötlet szerkesztés (státusz, prioritás)",
+        "`DELETE /api/v1/ideas/{id}` - ötlet törlés",
+        "`POST /api/v1/ideas/generate` - AI ötlet generálás (dokumentum/email elemzés alapján)",
+        "Státusz: Új → Átgondolva → Megvalósítva / Elvetve",
+        "Prioritás: magas/közepes/alacsony (szín kódolás)",
+        "Kapcsolódó folyamat hivatkozás dropdown",
+        "Szűrés státusz és prioritás szerint",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-036"
+      ],
+      "priority": 37,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-038",
+      "title": "Audit Log implementálás",
+      "description": "As a user, I want a complete audit log so that I can track all actions performed in the application.",
+      "acceptanceCriteria": [
+        "Middleware/decorator minden API híváshoz ami audit log bejegyzést hoz létre",
+        "`GET /api/v1/audit-log` - audit napló listázása (szűrés: dátum tartomány, művelet típusa, érintett entitás)",
+        "Frontend: `/audit-log` oldalon időrendi lista (legújabb elöl)",
+        "Részletek kibontás (JSON details megjelenítés)",
+        "Megőrzési idő konfiguálható (Settings-ben napokban)",
+        "Export funkció (CSV/Excel)",
+        "Automatikus régi bejegyzések törlése (APScheduler, a konfiguált megőrzési idő alapján)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-037"
+      ],
+      "priority": 38,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-039",
+      "title": "AI Tudásbázis & Tanulás monitor oldal",
+      "description": "As a user, I want to see what the AI has learned and track changes so that I have full visibility into its knowledge.",
+      "acceptanceCriteria": [
+        "Frontend: `/knowledge` oldal",
+        "Tudásbázisban lévő dokumentumok listája (chunk count megjelenítéssel)",
+        "`GET /api/v1/ai/knowledge-log` - tanulási napló (mikor mit adtunk hozzá/vettünk el)",
+        "Személyiség változások naplója",
+        "Dokumentum eltávolítás a tudásbázisból (+ FAISS index frissítés)",
+        "Statisztika: összes chunk, összes dokumentum, utolsó frissítés dátuma",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-038"
+      ],
+      "priority": 39,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-040",
+      "title": "WebSocket infrastruktúra",
+      "description": "As a developer, I want a WebSocket server so that real-time features (script logs, chat streaming, notifications) work properly.",
+      "acceptanceCriteria": [
+        "FastAPI WebSocket endpoint: `/ws`",
+        "Event típusok: script.output, script.status, chat.stream, notification, pst_import.progress",
+        "Frontend: WebSocket client (automatikus újracsatlakozás)",
+        "Toast notification megjelenítés WebSocket event-ekre (react-hot-toast)",
+        "Böngésző notification (Web Notification API) - engedélyezhető/letiltható a beállításokban",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-039"
+      ],
+      "priority": 40,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-041",
+      "title": "Böngésző és toast értesítések",
+      "description": "As a user, I want browser and in-app notifications so that I'm informed about important events.",
+      "acceptanceCriteria": [
+        "Böngésző desktop notification (Web Notification API): feladat generálás kész, PST import kész, script futás kész/hiba, AI ötlet generálás kész, dokumentum feldolgozás kész",
+        "Toast notification (react-hot-toast): ugyanezek az események + hibaüzenetek",
+        "Beállításokban ki/be kapcsolható mindkettő",
+        "Értesítések ikon a header-ben (badge a nemolvasottak számával)",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-040"
+      ],
+      "priority": 41,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-042",
+      "title": "Playwright E2E tesztek",
+      "description": "As a developer, I want comprehensive E2E tests so that all features are verified automatically.",
+      "acceptanceCriteria": [
+        "`tests/demo.spec.js` fájl létrehozása Playwright-tel",
+        "Teszt esetek:",
+        "`npx playwright test` sikeresen lefut",
+        "Teszt user: `testuser@localhost` jelszó: `1122`",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-041"
+      ],
+      "priority": 42,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-043",
+      "title": "AI dokumentum összefoglaló generálás",
+      "description": "As a user, I want AI to generate summaries of uploaded documents so that I can quickly understand their content.",
+      "acceptanceCriteria": [
+        "`POST /api/v1/documents/{id}/summarize` - AI összefoglaló generálás",
+        "Az összefoglaló a documents.summary mezőbe kerül",
+        "Frontend: \"Összefoglaló generálás\" gomb a dokumentum részletekben",
+        "Lokális vagy online AI használata a beállítások szerint",
+        "cd backend && python -m pytest",
+        "cd frontend && npx playwright test",
+        "A fejlesztett funkció manuálisan is ellenőrizendő böngészőben"
+      ],
+      "dependsOn": [
+        "US-042"
+      ],
+      "priority": 43,
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
+    }
+  ],
+  "metadata": {
+    "updatedAt": "2026-02-12T08:37:04.715Z"
+  }
+}

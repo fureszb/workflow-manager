@@ -1,0 +1,15 @@
+{
+  "id": "038ed345-d8ec-4492-b042-4cdf9f0d70ad",
+  "status": "interrupted",
+  "startedAt": "2026-02-12T10:27:48.173Z",
+  "updatedAt": "2026-02-12T10:34:59.136Z",
+  "agentPlugin": "claude",
+  "trackerPlugin": "json",
+  "prdPath": "hibakV2.json",
+  "currentIteration": 10,
+  "maxIterations": 10,
+  "totalTasks": 0,
+  "tasksCompleted": 1,
+  "cwd": "/home/bencelinux/workflow-manager",
+  "endedAt": "2026-02-12T10:34:59.136Z"
+}

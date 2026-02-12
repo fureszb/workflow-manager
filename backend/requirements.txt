@@ -11,3 +11,5 @@ httpx
 apscheduler
 websockets
 pypff
+reportlab
+pymysql

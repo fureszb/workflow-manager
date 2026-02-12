@@ -26,6 +26,7 @@ import {
   GripVertical,
   RefreshCw,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../utils/api';
 
 // Sortable Widget Component
@@ -207,6 +208,7 @@ const Dashboard = () => {
       setDashboardData(response.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      toast.error('Hiba a dashboard adatok betöltésekor');
     } finally {
       setIsLoading(false);
     }
@@ -230,6 +232,7 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching layout:', error);
+      // Layout fetch failure is non-critical, use default order silently
     }
   };
 
@@ -258,6 +261,7 @@ const Dashboard = () => {
 
         api.post('/v1/dashboard/layout/batch', layoutData).catch(err => {
           console.error('Error saving layout:', err);
+          toast.error('Hiba az elrendezés mentésekor');
         });
 
         return newOrder;

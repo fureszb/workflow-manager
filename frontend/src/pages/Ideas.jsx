@@ -103,6 +103,10 @@ const Ideas = () => {
       setProcessTypes(response.data);
     } catch (err) {
       console.error('Error fetching process types:', err);
+      // Process types are optional for ideas, so only show toast on network error
+      if (!err.response) {
+        toast.error('Hiba a folyamattípusok betöltésekor');
+      }
     }
   };
 

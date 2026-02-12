@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './store/ThemeContext';
 import { WebSocketProvider } from './store/WebSocketContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/layout/Layout';
 
 // Pages
@@ -21,30 +22,32 @@ import Knowledge from './pages/Knowledge';
 
 function App() {
   return (
-    <ThemeProvider>
-      <WebSocketProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="processes" element={<Processes />} />
-              <Route path="processes/archive" element={<ProcessArchive />} />
-              <Route path="processes/:processId/tasks/:taskId" element={<TaskDetail />} />
-              <Route path="emails" element={<Emails />} />
-              <Route path="documents" element={<Documents />} />
-              <Route path="chat" element={<Chat />} />
-              <Route path="ideas" element={<Ideas />} />
-              <Route path="statistics" element={<Statistics />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="audit-log" element={<AuditLog />} />
-              <Route path="scripts" element={<Scripts />} />
-              <Route path="token-monitor" element={<TokenMonitor />} />
-              <Route path="knowledge" element={<Knowledge />} />
-            </Route>
-          </Routes>
-        </Router>
-      </WebSocketProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <WebSocketProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="processes" element={<Processes />} />
+                <Route path="processes/archive" element={<ProcessArchive />} />
+                <Route path="processes/:processId/tasks/:taskId" element={<TaskDetail />} />
+                <Route path="emails" element={<Emails />} />
+                <Route path="documents" element={<Documents />} />
+                <Route path="chat" element={<Chat />} />
+                <Route path="ideas" element={<Ideas />} />
+                <Route path="statistics" element={<Statistics />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="audit-log" element={<AuditLog />} />
+                <Route path="scripts" element={<Scripts />} />
+                <Route path="token-monitor" element={<TokenMonitor />} />
+                <Route path="knowledge" element={<Knowledge />} />
+              </Route>
+            </Routes>
+          </Router>
+        </WebSocketProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

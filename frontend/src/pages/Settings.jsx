@@ -67,7 +67,10 @@ const Settings = () => {
   useEffect(() => {
     api.get('/v1/settings').then((res) => {
       setSettings(res.data);
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('Error loading settings:', err);
+      toast.error('Hiba a beállítások betöltésekor');
+    });
   }, []);
 
   const loadPersonalities = useCallback(async () => {
@@ -78,8 +81,9 @@ const Settings = () => {
         ollama: res.data.ollama || { name: '', system_prompt: '', tone: 'professional', expertise: '', language: 'magyar' },
         openrouter: res.data.openrouter || { name: '', system_prompt: '', tone: 'professional', expertise: '', language: 'magyar' },
       });
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('Error loading AI personalities:', err);
+      toast.error('Hiba az AI személyiségek betöltésekor');
     } finally {
       setLoadingPersonalities(false);
     }
@@ -94,7 +98,10 @@ const Settings = () => {
   const loadStatuses = useCallback(() => {
     api.get('/v1/statuses').then((res) => {
       setStatuses(res.data);
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('Error loading statuses:', err);
+      toast.error('Hiba a státuszok betöltésekor');
+    });
   }, []);
 
   const loadKnowledgeDocs = useCallback(async () => {
@@ -102,8 +109,9 @@ const Settings = () => {
     try {
       const res = await api.get('/v1/documents');
       setKnowledgeDocs(res.data);
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('Error loading knowledge documents:', err);
+      toast.error('Hiba a dokumentumok betöltésekor');
     } finally {
       setLoadingKnowledge(false);
     }

@@ -368,8 +368,8 @@ const TokenMonitor = () => {
                 <Tooltip
                   contentStyle={tooltipStyle}
                   formatter={(value, name, props) => [
-                    `${formatNumber(value)} tokens ($${props.payload.cost.toFixed(4)})`,
-                    props.payload.model_name
+                    `${formatNumber(value)} tokens ($${(props.payload?.cost ?? 0).toFixed(4)})`,
+                    props.payload?.model_name || name
                   ]}
                 />
                 <Legend
@@ -451,7 +451,7 @@ const TokenMonitor = () => {
                       {formatNumber(item.output_tokens)}
                     </td>
                     <td className="p-3 text-right font-mono" style={{ color: chartColors.success }}>
-                      ${item.actual_cost.toFixed(4)}
+                      ${(item.actual_cost ?? 0).toFixed(4)}
                     </td>
                   </tr>
                 ))}
@@ -468,7 +468,7 @@ const TokenMonitor = () => {
                     {formatNumber(costData.total_output_tokens)}
                   </td>
                   <td className="p-3 text-right font-mono font-bold" style={{ color: chartColors.success }}>
-                    ${costData.total_cost.toFixed(4)}
+                    ${(costData.total_cost ?? 0).toFixed(4)}
                   </td>
                 </tr>
               </tfoot>
@@ -557,7 +557,7 @@ const TokenMonitor = () => {
                   </div>
                   <div className="flex justify-between">
                     <span style={{ color: 'var(--text-secondary)' }}>Koltseg:</span>
-                    <span style={{ color: chartColors.success }}>${model.cost.toFixed(4)}</span>
+                    <span style={{ color: chartColors.success }}>${(model.cost ?? 0).toFixed(4)}</span>
                   </div>
                 </div>
               </div>

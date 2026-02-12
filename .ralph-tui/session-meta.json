@@ -1,15 +1,14 @@
 {
-  "id": "2e0d4620-2bdc-4002-9889-861b422c1fa8",
-  "status": "completed",
-  "startedAt": "2026-02-12T13:27:10.015Z",
-  "updatedAt": "2026-02-12T13:41:16.345Z",
+  "id": "27a5a30c-eaa3-450d-a872-0d31a968b2ce",
+  "status": "running",
+  "startedAt": "2026-02-12T18:24:09.168Z",
+  "updatedAt": "2026-02-12T18:43:16.088Z",
   "agentPlugin": "claude",
   "trackerPlugin": "json",
   "prdPath": "hibakV2.json",
-  "currentIteration": 9,
+  "currentIteration": 6,
   "maxIterations": 10,
   "totalTasks": 0,
-  "tasksCompleted": 3,
-  "cwd": "/home/bencelinux/workflow-manager",
-  "endedAt": "2026-02-12T13:41:16.345Z"
+  "tasksCompleted": 6,
+  "cwd": "/home/bencelinux/workflow-manager"
 }

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: '/api',
@@ -26,11 +27,26 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle common errors
-    if (error.response?.status === 401) {
+    // Handle network errors (no response from server)
+    if (!error.response) {
+      toast.error('Hálózati hiba - a szerver nem elérhető');
+      return Promise.reject(error);
+    }
+
+    // Handle specific HTTP status codes
+    const status = error.response.status;
+
+    if (status === 401) {
       // Unauthorized - could redirect to login
       console.error('Unauthorized access');
+    } else if (status === 403) {
+      toast.error('Hozzáférés megtagadva');
+    } else if (status === 500) {
+      toast.error('Szerverhiba történt');
+    } else if (status === 502 || status === 503 || status === 504) {
+      toast.error('A szerver jelenleg nem elérhető');
     }
+
     return Promise.reject(error);
   }
 );

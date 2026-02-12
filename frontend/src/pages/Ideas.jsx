@@ -99,7 +99,7 @@ const Ideas = () => {
   // Fetch process types for dropdown
   const fetchProcessTypes = async () => {
     try {
-      const response = await api.get('/v1/processes/types');
+      const response = await api.get('/v1/processes');
       setProcessTypes(response.data);
     } catch (err) {
       console.error('Error fetching process types:', err);

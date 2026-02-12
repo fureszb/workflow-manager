@@ -17,6 +17,10 @@ import {
   Sparkles,
   Copy,
   Check,
+  Plus,
+  CheckSquare,
+  GripVertical,
+  RefreshCw,
 } from 'lucide-react';
 
 const MONTH_NAMES = [
@@ -70,6 +74,14 @@ const TaskDetail = () => {
   const [aiDraft, setAiDraft] = useState('');
   const [copiedDraft, setCopiedDraft] = useState(false);
 
+  // Subtasks
+  const [subtasks, setSubtasks] = useState([]);
+  const [loadingSubtasks, setLoadingSubtasks] = useState(false);
+  const [newSubtaskName, setNewSubtaskName] = useState('');
+  const [addingSubtask, setAddingSubtask] = useState(false);
+  const [generatingSubtasks, setGeneratingSubtasks] = useState(false);
+  const [subtaskDragIdx, setSubtaskDragIdx] = useState(null);
+
   const loadTask = useCallback(async () => {
     try {
       const res = await api.get(`/v1/monthly-tasks/${taskId}`);
@@ -103,11 +115,24 @@ const TaskDetail = () => {
     }
   }, [taskId]);
 
+  const loadSubtasks = useCallback(async () => {
+    setLoadingSubtasks(true);
+    try {
+      const res = await api.get(`/v1/monthly-tasks/${taskId}/subtasks`);
+      setSubtasks(res.data);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingSubtasks(false);
+    }
+  }, [taskId]);
+
   useEffect(() => {
     loadTask();
     loadStatuses();
     loadScripts();
-  }, [loadTask, loadStatuses, loadScripts]);
+    loadSubtasks();
+  }, [loadTask, loadStatuses, loadScripts, loadSubtasks]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -242,6 +267,94 @@ const TaskDetail = () => {
     }
   };
 
+  // Subtask handlers
+  const handleAddSubtask = async () => {
+    if (!newSubtaskName.trim()) return;
+    setAddingSubtask(true);
+    try {
+      await api.post(`/v1/monthly-tasks/${taskId}/subtasks`, {
+        process_instance_id: parseInt(taskId),
+        name: newSubtaskName,
+      });
+      setNewSubtaskName('');
+      toast.success('Alfeladat hozzáadva!');
+      loadSubtasks();
+    } catch {
+      toast.error('Hiba az alfeladat hozzáadásakor!');
+    } finally {
+      setAddingSubtask(false);
+    }
+  };
+
+  const handleSubtaskStatusChange = async (subtaskId, newStatusId) => {
+    try {
+      await api.put(`/v1/monthly-tasks/${taskId}/subtasks/${subtaskId}`, {
+        status_id: newStatusId ? parseInt(newStatusId) : null,
+      });
+      loadSubtasks();
+    } catch {
+      toast.error('Hiba az alfeladat státusz frissítésekor!');
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId) => {
+    try {
+      await api.delete(`/v1/monthly-tasks/${taskId}/subtasks/${subtaskId}`);
+      toast.success('Alfeladat törölve!');
+      loadSubtasks();
+    } catch {
+      toast.error('Hiba az alfeladat törlésekor!');
+    }
+  };
+
+  const handleGenerateSubtasksFromTemplate = async () => {
+    setGeneratingSubtasks(true);
+    try {
+      const res = await api.post(`/v1/monthly-tasks/${taskId}/subtasks/generate-from-template`);
+      toast.success(res.data.message || 'Alfeladatok generálva!');
+      loadSubtasks();
+    } catch {
+      toast.error('Hiba az alfeladatok generálásakor!');
+    } finally {
+      setGeneratingSubtasks(false);
+    }
+  };
+
+  const getSubtaskProgress = () => {
+    if (subtasks.length === 0) return { completed: 0, total: 0, percent: 0 };
+    const completed = subtasks.filter(s => s.status?.name === 'Kész').length;
+    return {
+      completed,
+      total: subtasks.length,
+      percent: Math.round((completed / subtasks.length) * 100),
+    };
+  };
+
+  // Subtask drag & drop handlers
+  const handleSubtaskDragStart = (idx) => {
+    setSubtaskDragIdx(idx);
+  };
+
+  const handleSubtaskDragOver = (e, idx) => {
+    e.preventDefault();
+    if (subtaskDragIdx === null || subtaskDragIdx === idx) return;
+    const updated = [...subtasks];
+    const [moved] = updated.splice(subtaskDragIdx, 1);
+    updated.splice(idx, 0, moved);
+    setSubtasks(updated);
+    setSubtaskDragIdx(idx);
+  };
+
+  const handleSubtaskDragEnd = async () => {
+    setSubtaskDragIdx(null);
+    try {
+      await api.put(`/v1/monthly-tasks/${taskId}/subtasks/reorder`, subtasks.map((s) => s.id));
+    } catch (err) {
+      console.error('Error reordering subtasks:', err);
+      loadSubtasks();
+    }
+  };
+
   const handleGenerateGuide = async () => {
     setGeneratingGuide(true);
     try {
@@ -360,6 +473,142 @@ const TaskDetail = () => {
             <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
               Markdown formázás támogatott.
             </p>
+          </div>
+
+          {/* Subtasks Section */}
+          <div className="rounded-lg border p-4" style={cardStyle}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <CheckSquare size={18} />
+                Alfeladatok
+                {subtasks.length > 0 && (
+                  <span className="text-sm font-normal" style={{ color: 'var(--text-secondary)' }}>
+                    ({getSubtaskProgress().completed}/{getSubtaskProgress().total})
+                  </span>
+                )}
+              </h2>
+              <button
+                onClick={handleGenerateSubtasksFromTemplate}
+                disabled={generatingSubtasks}
+                className="flex items-center gap-1 px-3 py-1 rounded text-sm font-medium transition-colors"
+                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                title="Alfeladatok generálása a folyamat sablonból"
+              >
+                <RefreshCw size={14} className={generatingSubtasks ? 'animate-spin' : ''} />
+                Sablonból
+              </button>
+            </div>
+
+            {/* Progress bar */}
+            {subtasks.length > 0 && (
+              <div className="mb-4">
+                <div
+                  className="h-2 rounded-full overflow-hidden"
+                  style={{ backgroundColor: 'var(--bg-secondary)' }}
+                >
+                  <div
+                    className="h-full transition-all duration-300"
+                    style={{
+                      width: `${getSubtaskProgress().percent}%`,
+                      backgroundColor: 'var(--success)',
+                    }}
+                  />
+                </div>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  {getSubtaskProgress().percent}% kész
+                </p>
+              </div>
+            )}
+
+            {/* Subtask list */}
+            {loadingSubtasks ? (
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Betöltés...</p>
+            ) : subtasks.length > 0 ? (
+              <div className="space-y-2 mb-4">
+                {subtasks.map((subtask, idx) => (
+                  <div
+                    key={subtask.id}
+                    draggable
+                    onDragStart={() => handleSubtaskDragStart(idx)}
+                    onDragOver={(e) => handleSubtaskDragOver(e, idx)}
+                    onDragEnd={handleSubtaskDragEnd}
+                    className="flex items-center gap-3 px-3 py-2 rounded border cursor-grab"
+                    style={{
+                      backgroundColor: subtask.status?.name === 'Kész' ? 'var(--success)10' : 'var(--bg-secondary)',
+                      borderColor: 'var(--border-color)',
+                      opacity: subtaskDragIdx === idx ? 0.5 : 1,
+                    }}
+                  >
+                    <GripVertical size={14} style={{ color: 'var(--text-secondary)', cursor: 'grab' }} />
+                    
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`font-medium ${subtask.status?.name === 'Kész' ? 'line-through' : ''}`}
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        {subtask.name}
+                      </p>
+                      {subtask.description && (
+                        <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+                          {subtask.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <select
+                      value={subtask.status_id || ''}
+                      onChange={(e) => handleSubtaskStatusChange(subtask.id, e.target.value)}
+                      className="px-2 py-1 rounded border text-sm"
+                      style={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderColor: subtask.status?.color || 'var(--border-color)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      <option value="">-</option>
+                      {statuses.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={() => handleDeleteSubtask(subtask.id)}
+                      className="p-1 rounded hover:bg-red-100 transition-colors"
+                      title="Törlés"
+                    >
+                      <Trash2 size={14} className="text-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                Nincsenek alfeladatok. Adj hozzá egyet vagy generáld a sablonból.
+              </p>
+            )}
+
+            {/* Add new subtask */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newSubtaskName}
+                onChange={(e) => setNewSubtaskName(e.target.value)}
+                placeholder="Új alfeladat neve..."
+                className="flex-1 px-3 py-2 rounded border"
+                style={inputStyle}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+              />
+              <button
+                onClick={handleAddSubtask}
+                disabled={addingSubtask || !newSubtaskName.trim()}
+                className="px-4 py-2 rounded font-medium transition-colors"
+                style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+              >
+                <Plus size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Notes */}

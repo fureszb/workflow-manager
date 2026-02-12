@@ -60,7 +60,8 @@ const Emails = () => {
   }, [filters]);
 
   const connectWebSocket = useCallback(() => {
-    const wsUrl = `ws://${window.location.hostname}:8000/ws`;
+    // Connect directly to backend WebSocket (CORS is allowed)
+    const wsUrl = import.meta.env.DEV ? 'ws://localhost:8000/ws' : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onmessage = (event) => {

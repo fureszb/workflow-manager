@@ -44,13 +44,81 @@ class ProcessTypeCreate(ProcessTypeBase):
 
 
 class ProcessTypeUpdate(BaseModel):
+    name: Optional[str] = None
     description: Optional[str] = None
     quick_guide: Optional[str] = None
+    order: Optional[int] = None
+    is_active: Optional[bool] = None
 
 
 class ProcessTypeResponse(ProcessTypeBase):
     id: int
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- ProcessTypeSubtask Schemas (sablon alfeladatok) ---
+class ProcessTypeSubtaskBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    order: int = 0
+    is_active: bool = True
+
+
+class ProcessTypeSubtaskCreate(ProcessTypeSubtaskBase):
+    process_type_id: int
+
+
+class ProcessTypeSubtaskUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class ProcessTypeSubtaskResponse(ProcessTypeSubtaskBase):
+    id: int
+    process_type_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProcessTypeWithSubtasks(ProcessTypeResponse):
+    subtask_templates: List["ProcessTypeSubtaskResponse"] = []
+
+
+# --- ProcessInstanceSubtask Schemas (havi feladat alfeladatai) ---
+class ProcessInstanceSubtaskBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    status_id: Optional[int] = None
+    order: int = 0
+
+
+class ProcessInstanceSubtaskCreate(ProcessInstanceSubtaskBase):
+    process_instance_id: int
+    template_id: Optional[int] = None
+
+
+class ProcessInstanceSubtaskUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    status_id: Optional[int] = None
+    order: Optional[int] = None
+
+
+class ProcessInstanceSubtaskResponse(ProcessInstanceSubtaskBase):
+    id: int
+    process_instance_id: int
+    template_id: Optional[int] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    status: Optional[StatusDefinitionResponse] = None
 
     class Config:
         from_attributes = True

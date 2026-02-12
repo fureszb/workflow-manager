@@ -36,12 +36,15 @@ export function useWebSocket({
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
-  // Get WebSocket URL
+  // Get WebSocket URL - connect directly to backend in development
   const getWsUrl = useCallback(() => {
+    // In development, connect directly to backend on port 8000
+    // In production, use the same host
+    if (import.meta.env.DEV) {
+      return 'ws://localhost:8000/ws';
+    }
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const wsHost = apiUrl.replace(/^https?:\/\//, '').replace(/\/api$/, '');
-    return `${wsProtocol}//${wsHost}/ws`;
+    return `${wsProtocol}//${window.location.host}/ws`;
   }, []);
 
   // Request browser notification permission

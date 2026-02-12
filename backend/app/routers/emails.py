@@ -31,6 +31,44 @@ from app.services.ai_service import send_chat_message
 router = APIRouter(prefix="/emails")
 
 
+@router.get("/available-tasks", response_model=List[dict])
+def list_available_tasks(
+    year: Optional[int] = Query(None),
+    month: Optional[int] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """List available tasks for email linking dropdown.
+
+    Returns process instances with their process type names.
+    Defaults to current month if year/month not specified.
+    """
+    from datetime import datetime as dt_datetime
+
+    if year is None or month is None:
+        now = dt_datetime.now()
+        year = year or now.year
+        month = month or now.month
+
+    tasks = db.query(ProcessInstance).filter(
+        ProcessInstance.year == year,
+        ProcessInstance.month == month
+    ).all()
+
+    result = []
+    for task in tasks:
+        process_type = db.query(ProcessType).filter(ProcessType.id == task.process_type_id).first()
+        if process_type:
+            result.append({
+                "id": task.id,
+                "name": process_type.name,
+                "full_name": f"{process_type.name} ({year}/{month:02d})",
+                "year": year,
+                "month": month,
+            })
+
+    return result
+
+
 @router.get("", response_model=List[EmailResponse])
 def list_emails(
     skip: int = 0,
@@ -119,44 +157,6 @@ def get_email(email_id: int, db: Session = Depends(get_db)):
     }
 
     return EmailWithAttachments(**response_data)
-
-
-@router.get("/available-tasks", response_model=List[dict])
-def list_available_tasks(
-    year: Optional[int] = Query(None),
-    month: Optional[int] = Query(None),
-    db: Session = Depends(get_db)
-):
-    """List available tasks for email linking dropdown.
-
-    Returns process instances with their process type names.
-    Defaults to current month if year/month not specified.
-    """
-    from datetime import datetime
-
-    if year is None or month is None:
-        now = datetime.now()
-        year = year or now.year
-        month = month or now.month
-
-    tasks = db.query(ProcessInstance).filter(
-        ProcessInstance.year == year,
-        ProcessInstance.month == month
-    ).all()
-
-    result = []
-    for task in tasks:
-        process_type = db.query(ProcessType).filter(ProcessType.id == task.process_type_id).first()
-        if process_type:
-            result.append({
-                "id": task.id,
-                "name": process_type.name,
-                "full_name": f"{process_type.name} ({year}/{month:02d})",
-                "year": year,
-                "month": month,
-            })
-
-    return result
 
 
 @router.put("/{email_id}/importance", response_model=EmailResponse)

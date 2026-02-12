@@ -3,7 +3,8 @@ import { useTheme } from '../store/ThemeContext';
 import { useWebSocketContext } from '../store/WebSocketContext';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
-import { GripVertical, Trash2, Plus, Star, FileText, File, Loader2, X, Bell, BellOff, Wifi, WifiOff, MessageSquare } from 'lucide-react';
+import { GripVertical, Trash2, Plus, Star, FileText, File, Loader2, X, Bell, BellOff, Wifi, WifiOff, MessageSquare, ListChecks } from 'lucide-react';
+import SubtaskTemplates from '../components/SubtaskTemplates';
 
 const TABS = [
   { id: 'general', label: 'Általános' },
@@ -49,6 +50,15 @@ const Settings = () => {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', color: '' });
   const [dragIdx, setDragIdx] = useState(null);
+
+  // Processes state
+  const [processes, setProcesses] = useState([]);
+  const [loadingProcesses, setLoadingProcesses] = useState(false);
+  const [newProcess, setNewProcess] = useState({ name: '', description: '', quick_guide: '' });
+  const [editingProcessId, setEditingProcessId] = useState(null);
+  const [editProcessForm, setEditProcessForm] = useState({ name: '', description: '', quick_guide: '' });
+  const [processDragIdx, setProcessDragIdx] = useState(null);
+  const [expandedProcessId, setExpandedProcessId] = useState(null);
 
   // Knowledge base documents state
   const [knowledgeDocs, setKnowledgeDocs] = useState([]);
@@ -117,9 +127,28 @@ const Settings = () => {
     }
   }, []);
 
+  const loadProcesses = useCallback(async () => {
+    setLoadingProcesses(true);
+    try {
+      const res = await api.get('/v1/processes?include_inactive=true');
+      setProcesses(res.data);
+    } catch (err) {
+      console.error('Error loading processes:', err);
+      toast.error('Hiba a folyamatok betöltésekor');
+    } finally {
+      setLoadingProcesses(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadStatuses();
   }, [loadStatuses]);
+
+  useEffect(() => {
+    if (activeTab === 'processes') {
+      loadProcesses();
+    }
+  }, [activeTab, loadProcesses]);
 
   useEffect(() => {
     if (activeTab === 'knowledge') {
@@ -1025,24 +1054,379 @@ const Settings = () => {
     </div>
   );
 
-  const renderProcesses = () => (
-    <div className="space-y-4">
-      <p style={{ color: 'var(--text-secondary)' }}>
-        Folyamat típusok és sablonok kezelése.
-      </p>
-      <div className="space-y-2">
-        {['Számlázás', 'HR folyamatok', 'IT karbantartás', 'Beszerzés'].map((name) => (
-          <div
-            key={name}
-            className="flex items-center justify-between px-3 py-2 rounded border"
-            style={cardStyle}
-          >
-            <span style={{ color: 'var(--text-primary)' }}>{name}</span>
+  // Process CRUD handlers
+  const handleCreateProcess = async () => {
+    if (!newProcess.name.trim()) {
+      toast.error('A folyamat neve kötelező!');
+      return;
+    }
+    try {
+      await api.post('/v1/processes', newProcess);
+      setNewProcess({ name: '', description: '', quick_guide: '' });
+      loadProcesses();
+      toast.success('Folyamat típus létrehozva!');
+    } catch (err) {
+      console.error('Error creating process:', err);
+      toast.error('Hiba a folyamat létrehozásakor!');
+    }
+  };
+
+  const handleUpdateProcess = async (id) => {
+    try {
+      await api.put(`/v1/processes/${id}`, editProcessForm);
+      setEditingProcessId(null);
+      loadProcesses();
+      toast.success('Folyamat típus frissítve!');
+    } catch (err) {
+      console.error('Error updating process:', err);
+      toast.error('Hiba a folyamat frissítésekor!');
+    }
+  };
+
+  const handleDeleteProcess = async (id) => {
+    if (!window.confirm('Biztosan törölni/inaktiválni szeretnéd ezt a folyamat típust?')) return;
+    try {
+      const res = await api.delete(`/v1/processes/${id}`);
+      loadProcesses();
+      if (res.data.deactivated) {
+        toast.success('Folyamat inaktiválva (vannak hozzá tartozó feladatok)');
+      } else {
+        toast.success('Folyamat típus törölve!');
+      }
+    } catch (err) {
+      console.error('Error deleting process:', err);
+      toast.error('Hiba a folyamat törlésekor!');
+    }
+  };
+
+  const handleToggleProcessActive = async (process) => {
+    try {
+      await api.put(`/v1/processes/${process.id}`, { is_active: !process.is_active });
+      loadProcesses();
+      toast.success(process.is_active ? 'Folyamat inaktiválva' : 'Folyamat aktiválva');
+    } catch (err) {
+      console.error('Error toggling process:', err);
+      toast.error('Hiba a folyamat módosításakor!');
+    }
+  };
+
+  const handleProcessDragStart = (idx) => {
+    setProcessDragIdx(idx);
+  };
+
+  const handleProcessDragOver = (e, idx) => {
+    e.preventDefault();
+    if (processDragIdx === null || processDragIdx === idx) return;
+    const updated = [...processes];
+    const [moved] = updated.splice(processDragIdx, 1);
+    updated.splice(idx, 0, moved);
+    setProcesses(updated);
+    setProcessDragIdx(idx);
+  };
+
+  const handleProcessDragEnd = async () => {
+    setProcessDragIdx(null);
+    try {
+      await api.put('/v1/processes/reorder', processes.map((p) => p.id));
+      toast.success('Sorrend mentve!');
+    } catch (err) {
+      console.error('Error reordering processes:', err);
+      toast.error('Hiba a sorrend mentésekor!');
+      loadProcesses();
+    }
+  };
+
+  const renderProcesses = () => {
+    if (loadingProcesses) {
+      return (
+        <div className="text-center py-8">
+          <Loader2 className="animate-spin mx-auto" size={24} style={{ color: 'var(--text-secondary)' }} />
+          <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>Betöltés...</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            Folyamat típusok kezelése. Ezek a típusok jelennek meg a havi feladatok generálásakor.
+            Húzd a sorrendjüket a változtatáshoz.
+          </p>
+        </div>
+
+        {/* Process list with drag & drop */}
+        <div className="space-y-2" data-testid="process-list">
+          {processes.map((process, idx) => (
+            <div
+              key={process.id}
+              draggable={!editingProcessId}
+              onDragStart={() => handleProcessDragStart(idx)}
+              onDragOver={(e) => handleProcessDragOver(e, idx)}
+              onDragEnd={handleProcessDragEnd}
+              className={`rounded border transition-all ${
+                !process.is_active ? 'opacity-50' : ''
+              }`}
+              style={{
+                ...cardStyle,
+                opacity: processDragIdx === idx ? 0.5 : process.is_active ? 1 : 0.6,
+              }}
+              data-testid={`process-item-${process.id}`}
+            >
+              {/* Header row */}
+              <div className="flex items-center gap-3 px-3 py-2">
+                <GripVertical
+                  size={16}
+                  style={{ color: 'var(--text-secondary)', cursor: 'grab' }}
+                />
+                
+                {editingProcessId === process.id ? (
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="text"
+                      value={editProcessForm.name}
+                      onChange={(e) => setEditProcessForm((f) => ({ ...f, name: e.target.value }))}
+                      className="px-2 py-1 rounded border flex-1"
+                      style={inputStyle}
+                      placeholder="Folyamat neve"
+                      data-testid="edit-process-name"
+                    />
+                    <button
+                      onClick={() => handleUpdateProcess(process.id)}
+                      className="px-3 py-1 rounded text-sm font-medium"
+                      style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                    >
+                      Mentés
+                    </button>
+                    <button
+                      onClick={() => setEditingProcessId(null)}
+                      className="px-3 py-1 rounded text-sm"
+                      style={{ color: 'var(--text-secondary)' }}
+                    >
+                      Mégse
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="flex-1 cursor-pointer"
+                      onClick={() => setExpandedProcessId(
+                        expandedProcessId === process.id ? null : process.id
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="font-medium"
+                          style={{ color: 'var(--text-primary)' }}
+                        >
+                          {process.name}
+                        </span>
+                        {!process.is_active && (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded"
+                            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
+                          >
+                            Inaktív
+                          </span>
+                        )}
+                      </div>
+                      {process.description && (
+                        <p
+                          className="text-sm truncate max-w-md"
+                          style={{ color: 'var(--text-secondary)' }}
+                        >
+                          {process.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleToggleProcessActive(process)}
+                        className="p-1 rounded transition-colors"
+                        title={process.is_active ? 'Inaktiválás' : 'Aktiválás'}
+                        style={{ color: process.is_active ? 'var(--success)' : 'var(--text-secondary)' }}
+                      >
+                        {process.is_active ? '✓' : '○'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingProcessId(process.id);
+                          setEditProcessForm({
+                            name: process.name,
+                            description: process.description || '',
+                            quick_guide: process.quick_guide || '',
+                          });
+                          setExpandedProcessId(process.id);
+                        }}
+                        className="p-1 rounded hover:bg-blue-100 transition-colors"
+                        title="Szerkesztés"
+                        style={{ color: 'var(--accent)' }}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProcess(process.id)}
+                        className="p-1 rounded hover:bg-red-100 transition-colors"
+                        title="Törlés"
+                      >
+                        <Trash2 size={16} className="text-red-500" />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Expanded edit form */}
+              {expandedProcessId === process.id && editingProcessId === process.id && (
+                <div
+                  className="px-3 py-3 border-t space-y-3"
+                  style={{ borderColor: 'var(--border-color)' }}
+                >
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      Leírás
+                    </label>
+                    <textarea
+                      value={editProcessForm.description}
+                      onChange={(e) => setEditProcessForm((f) => ({ ...f, description: e.target.value }))}
+                      className="w-full px-2 py-1 rounded border"
+                      style={inputStyle}
+                      rows={2}
+                      placeholder="Folyamat rövid leírása..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      Gyors útmutató (sablon)
+                    </label>
+                    <textarea
+                      value={editProcessForm.quick_guide}
+                      onChange={(e) => setEditProcessForm((f) => ({ ...f, quick_guide: e.target.value }))}
+                      className="w-full px-2 py-1 rounded border font-mono text-sm"
+                      style={inputStyle}
+                      rows={5}
+                      placeholder="1. Első lépés...\n2. Második lépés..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Expanded view (read-only) */}
+              {expandedProcessId === process.id && editingProcessId !== process.id && (
+                <div
+                  className="px-3 py-3 border-t space-y-4"
+                  style={{ borderColor: 'var(--border-color)' }}
+                >
+                  {process.description && (
+                    <div>
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                        Leírás:
+                      </span>
+                      <p className="text-sm mt-1" style={{ color: 'var(--text-primary)' }}>
+                        {process.description}
+                      </p>
+                    </div>
+                  )}
+                  {process.quick_guide && (
+                    <div>
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                        Gyors útmutató:
+                      </span>
+                      <pre
+                        className="text-sm mt-1 whitespace-pre-wrap font-mono p-2 rounded"
+                        style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-secondary)' }}
+                      >
+                        {process.quick_guide}
+                      </pre>
+                    </div>
+                  )}
+                  
+                  {/* Subtask Templates Section */}
+                  <div
+                    className="p-3 rounded border"
+                    style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <ListChecks size={16} style={{ color: 'var(--accent)' }} />
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        Alfeladat sablonok
+                      </span>
+                    </div>
+                    <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+                      Ezek az alfeladatok automatikusan létrejönnek minden új havi feladatnál.
+                    </p>
+                    <SubtaskTemplates processId={process.id} processName={process.name} />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* New process form */}
+        <div
+          className="rounded border p-4 space-y-3"
+          style={cardStyle}
+          data-testid="new-process-form"
+        >
+          <h4 className="font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <Plus size={16} />
+            Új folyamat típus hozzáadása
+          </h4>
+          <div>
+            <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+              Név *
+            </label>
+            <input
+              type="text"
+              value={newProcess.name}
+              onChange={(e) => setNewProcess((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Folyamat neve..."
+              className="w-full px-3 py-2 rounded border"
+              style={inputStyle}
+              data-testid="new-process-name"
+            />
           </div>
-        ))}
+          <div>
+            <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+              Leírás
+            </label>
+            <textarea
+              value={newProcess.description}
+              onChange={(e) => setNewProcess((p) => ({ ...p, description: e.target.value }))}
+              placeholder="Folyamat rövid leírása..."
+              className="w-full px-3 py-2 rounded border"
+              style={inputStyle}
+              rows={2}
+              data-testid="new-process-description"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+              Gyors útmutató (sablon)
+            </label>
+            <textarea
+              value={newProcess.quick_guide}
+              onChange={(e) => setNewProcess((p) => ({ ...p, quick_guide: e.target.value }))}
+              placeholder="1. Első lépés...\n2. Második lépés..."
+              className="w-full px-3 py-2 rounded border font-mono text-sm"
+              style={inputStyle}
+              rows={4}
+              data-testid="new-process-guide"
+            />
+          </div>
+          <button
+            onClick={handleCreateProcess}
+            className="px-4 py-2 rounded font-medium"
+            style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+            data-testid="add-process-btn"
+          >
+            Folyamat hozzáadása
+          </button>
+        </div>
       </div>
-    </div>
   );
+  };
 
   const tabContent = {
     general: renderGeneral,

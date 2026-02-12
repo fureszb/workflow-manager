@@ -1,18 +1,36 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from app.core.database import get_db
 from app.models.models import ProcessType, ProcessInstance, ProcessFile
-from app.schemas.schemas import ProcessTypeResponse, GenerateGuideResponse
+from app.schemas.schemas import ProcessTypeResponse, ProcessTypeCreate, ProcessTypeUpdate, GenerateGuideResponse
 from app.services.ai_service import generate_quick_guide, extract_text_from_file
 
 router = APIRouter(prefix="/processes")
 
 
 @router.get("", response_model=List[ProcessTypeResponse])
-def list_processes(db: Session = Depends(get_db)):
+def list_processes(
+    include_inactive: bool = Query(False, description="Include inactive process types"),
+    db: Session = Depends(get_db)
+):
     """List all process types ordered by their order field."""
+    query = db.query(ProcessType)
+    if not include_inactive:
+        query = query.filter(ProcessType.is_active == True)
+    return query.order_by(ProcessType.order).all()
+
+
+@router.put("/reorder", response_model=List[ProcessTypeResponse])
+def reorder_processes(process_ids: List[int], db: Session = Depends(get_db)):
+    """Reorder process types based on the provided list of IDs."""
+    for idx, process_id in enumerate(process_ids):
+        process = db.query(ProcessType).filter(ProcessType.id == process_id).first()
+        if process:
+            process.order = idx
+    
+    db.commit()
     return db.query(ProcessType).filter(ProcessType.is_active == True).order_by(ProcessType.order).all()
 
 
@@ -23,6 +41,67 @@ def get_process(process_id: int, db: Session = Depends(get_db)):
     if not process:
         raise HTTPException(status_code=404, detail="Process not found")
     return process
+
+
+@router.post("", response_model=ProcessTypeResponse, status_code=201)
+def create_process(payload: ProcessTypeCreate, db: Session = Depends(get_db)):
+    """Create a new process type."""
+    # Get max order to add new process at the end
+    max_order = db.query(ProcessType).count()
+    
+    process = ProcessType(
+        name=payload.name,
+        description=payload.description,
+        quick_guide=payload.quick_guide,
+        order=payload.order if payload.order > 0 else max_order,
+        is_active=payload.is_active,
+    )
+    db.add(process)
+    db.commit()
+    db.refresh(process)
+    return process
+
+
+@router.put("/{process_id}", response_model=ProcessTypeResponse)
+def update_process(process_id: int, payload: ProcessTypeUpdate, db: Session = Depends(get_db)):
+    """Update a process type."""
+    process = db.query(ProcessType).filter(ProcessType.id == process_id).first()
+    if not process:
+        raise HTTPException(status_code=404, detail="Process not found")
+    
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(process, field, value)
+    
+    db.commit()
+    db.refresh(process)
+    return process
+
+
+@router.delete("/{process_id}")
+def delete_process(process_id: int, db: Session = Depends(get_db)):
+    """Delete or deactivate a process type.
+    
+    If the process type has instances, it will be deactivated instead of deleted.
+    """
+    process = db.query(ProcessType).filter(ProcessType.id == process_id).first()
+    if not process:
+        raise HTTPException(status_code=404, detail="Process not found")
+    
+    # Check if there are any instances using this process type
+    instances_count = db.query(ProcessInstance).filter(
+        ProcessInstance.process_type_id == process_id
+    ).count()
+    
+    if instances_count > 0:
+        # Deactivate instead of delete
+        process.is_active = False
+        db.commit()
+        return {"message": "A folyamat típus inaktiválva (van hozzá tartozó feladat)", "deactivated": True}
+    
+    db.delete(process)
+    db.commit()
+    return {"message": "Folyamat típus törölve", "deleted": True}
 
 
 @router.post("/{task_id}/generate-guide", response_model=GenerateGuideResponse)

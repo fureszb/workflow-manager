@@ -232,3 +232,366 @@ npm run dev
 ---
 
 Van még kérdésed? Szívesen segítek! 😊
+
+
+A javítások megvannak. Most készítek egy teljes, **frissített indítási útmutatót**:
+
+---
+
+# 🚀 FRISSÍTETT Projekt Indítási Útmutató (Ubuntu 24 LTS)
+
+## 📋 Amit javítottam a kódban:
+1. ✅ **WebSocket kapcsolat** - Most már a Vite proxy-n keresztül megy (nem közvetlenül a 8000-es portra)
+2. ✅ **API endpoint hiba** - `/v1/processes/types` → `/v1/processes` (ez volt a 422-es hiba oka)
+
+---
+
+## 🔧 1. LÉPÉS: Szükséges programok telepítése
+
+```bash
+# Rendszer frissítése
+sudo apt update && sudo apt upgrade -y
+
+# Node.js 20 telepítése
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Python telepítése
+sudo apt install -y python3 python3-pip python3-venv
+
+# MySQL telepítése
+sudo apt install -y mysql-server
+
+# MySQL indítása
+sudo systemctl start mysql
+sudo systemctl enable mysql
+```
+
+---
+
+## 🗄️ 2. LÉPÉS: MySQL adatbázis beállítása
+
+```bash
+# Belépés MySQL-be
+sudo mysql
+```
+
+**A MySQL promptban írd be:**
+```sql
+CREATE DATABASE workflow_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'testuser'@'localhost' IDENTIFIED BY '1122';
+GRANT ALL PRIVILEGES ON workflow_manager.* TO 'testuser'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+---
+
+## 🐍 3. LÉPÉS: Backend indítása (1. TERMINÁL)
+
+```bash
+# Menj a projekt mappájába (CSERÉLD KI A SAJÁT ÚTVONALRA!)
+cd /home/bencelinux/workflow-manager
+
+# Menj a backend mappába
+cd backend
+
+# Virtuális környezet létrehozása (csak először!)
+python3 -m venv venv
+
+# Virtuális környezet aktiválása
+source venv/bin/activate
+
+# Csomagok telepítése (csak először vagy ha változott!)
+pip install -r requirements.txt
+pip install pydantic-settings
+
+# Adatbázis táblák létrehozása
+alembic upgrade head
+
+# Teszt adatok betöltése (csak először!)
+python seed_data.py
+
+# Backend indítása
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**✅ Ha sikeres, ezt látod:**
+```
+INFO:     Uvicorn running on http://0.0.0.0:8000
+INFO:     Application startup complete.
+```
+
+**⚠️ HAGYD FUTNI! Ne zárd be ezt a terminált!**
+
+---
+
+## 🌐 4. LÉPÉS: Frontend indítása (2. TERMINÁL)
+
+Nyiss egy **ÚJ** terminált (Ctrl+Alt+T)!
+
+```bash
+# Menj a projekt frontend mappájába
+cd /home/bencelinux/workflow-manager/frontend
+
+# Node csomagok telepítése (csak először!)
+npm install
+
+# Frontend indítása
+npm run dev
+```
+
+**✅ Ha sikeres, ezt látod:**
+```
+  VITE v7.x.x  ready in xxx ms
+
+  ➜  Local:   http://localhost:5173/
+```
+
+---
+
+## 🎉 5. LÉPÉS: Megnyitás böngészőben
+
+Nyisd meg a **Firefox**-ban:
+```
+http://localhost:5173
+```
+
+---
+
+## 📊 Összefoglaló - Mi hol fut?
+
+| Szolgáltatás | Port | URL | Terminál |
+|-------------|------|-----|----------|
+| Frontend (Vite) | 5173 | http://localhost:5173 | 2. terminál |
+| Backend (FastAPI) | 8000 | http://localhost:8000 | 1. terminál |
+| WebSocket | 8000 → proxyzva | ws://localhost:5173/ws | automatikus |
+| MySQL | 3306 | localhost | háttérben |
+
+---
+
+## 🔄 KÖVETKEZŐ INDÍTÁS (ha már egyszer beállítottad)
+
+### 1. terminál (Backend):
+```bash
+cd /home/bencelinux/workflow-manager/backend
+source venv/bin/activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 2. terminál (Frontend):
+```bash
+cd /home/bencelinux/workflow-manager/frontend
+npm run dev
+```
+
+---
+
+## 🆘 HIBÁK ÉS MEGOLDÁSOK
+
+### ❌ Ha még mindig vannak WebSocket hibák
+A javítások után **újra kell indítani a frontend szervert**:
+1. A frontend terminálban nyomd meg: `Ctrl+C`
+2. Indítsd újra: `npm run dev`
+3. Frissítsd a böngészőt: `Ctrl+F5`
+
+### ❌ "Error generating ideas: 500"
+Ez az AI szolgáltatás hibája. Opciók:
+1. **Ollama telepítése** (helyi AI):
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ollama pull ajindal/llama3.1-storm:8b-q4_k_m
+   ```
+2. **Vagy:** Használd az OpenRouter-t (felhő AI) - állítsd be az API kulcsot a Beállítások oldalon
+
+### ❌ "Connection refused" MySQL hiba
+```bash
+sudo systemctl start mysql
+sudo systemctl status mysql
+```
+
+### ❌ "alembic: command not found"
+```bash
+source venv/bin/activate  # Biztos aktiváltad a venv-et?
+pip install alembic
+```
+
+---
+
+Indítsd újra mindkét terminált a javítások után, és a WebSocket + API hibáknak el kell tűnniük! 🎉
+
+
+
+
+
+
+
+Conversation Summary - Workflow Manager Project
+1. Conversation Overview
+This conversation focused on developing and debugging a Workflow Manager application - a full-stack web application for managing monthly business processes, tasks, emails, documents, and AI-assisted features. The discussion progressed through several phases:
+
+Initial setup and troubleshooting of the development environment
+Fixing WebSocket connection issues and API endpoint errors
+Adding custom process type management to Settings
+Implementing a subtasks/checklist system for process instances with status tracking
+The project is designed to help manage recurring monthly business tasks (like "Invoicing", "HR processes", etc.) with the ability to break them down into subtasks with individual status tracking.
+
+2. Active Development
+Most Recent Implementation: Subtasks System
+A two-level subtask system was implemented:
+
+ProcessTypeSubtask (Templates) - Subtask templates defined at the process type level in Settings
+ProcessInstanceSubtask (Instances) - Actual subtasks created for each monthly task, with individual status tracking
+Key Features Implemented:
+
+CRUD operations for subtask templates (in Settings → Processes)
+CRUD operations for instance subtasks (in TaskDetail page)
+Drag & drop reordering for both templates and instances
+"Generate from template" functionality to auto-create subtasks from templates
+Progress bar showing completion percentage
+Status dropdown for each subtask using existing status definitions
+Technical Approach:
+Backend: FastAPI router with specific route ordering (static routes before dynamic {id} routes)
+Frontend: React components with drag & drop using native HTML5 drag events
+Database: Two new tables with foreign key relationships
+3. Technical Stack
+Backend:
+Python 3.12 with FastAPI framework
+SQLAlchemy ORM with MySQL database
+Alembic for database migrations
+Pydantic for schema validation
+uvicorn as ASGI server
+APScheduler for scheduled tasks
+Frontend:
+React 18 with Vite 7
+Tailwind CSS v4 (via @tailwindcss/vite plugin)
+React Router DOM for routing
+Axios for API calls
+react-hot-toast for notifications
+Lucide React for icons
+Database:
+MySQL with utf8mb4_unicode_ci collation
+User: testuser, Password: 1122, Database: workflow_manager
+Development:
+Frontend runs on localhost:5173
+Backend runs on localhost:8000
+WebSocket connects directly to backend in dev mode (ws://localhost:8000/ws)
+4. File Operations
+Created/Modified Files:
+Backend - Models (backend/app/models/models.py):
+Python
+
+Apply
+# Added two new models:
+class ProcessTypeSubtask(Base):
+    __tablename__ = "process_type_subtasks"
+    # Template subtasks linked to ProcessType
+
+class ProcessInstanceSubtask(Base):
+    __tablename__ = "process_instance_subtasks"
+    # Instance subtasks linked to ProcessInstance with status_id
+Backend - Schemas (backend/app/schemas/schemas.py):
+Added schemas for both subtask types:
+
+ProcessTypeSubtaskBase/Create/Update/Response
+ProcessInstanceSubtaskBase/Create/Update/Response
+ProcessTypeUpdate - extended with name, order, is_active fields
+Backend - New Router (backend/app/routers/subtasks.py):
+Complete CRUD router with endpoints:
+
+PUT /processes/{id}/subtasks/reorder (MUST be before dynamic routes)
+GET/POST /processes/{id}/subtasks
+PUT/DELETE /processes/{id}/subtasks/{subtask_id}
+PUT /monthly-tasks/{id}/subtasks/reorder
+POST /monthly-tasks/{id}/subtasks/generate-from-template
+GET/POST /monthly-tasks/{id}/subtasks
+PUT/DELETE /monthly-tasks/{id}/subtasks/{subtask_id}
+Backend - Main (backend/app/main.py):
+Added subtasks router import and registration.
+
+Backend - Migration (backend/alembic/versions/g6b3f9d20e54_add_subtasks.py):
+Creates process_type_subtasks and process_instance_subtasks tables.
+
+Backend - Processes Router (backend/app/routers/processes.py):
+Extended with full CRUD for process types:
+
+PUT /reorder (moved before /{process_id})
+POST / - create new process type
+PUT /{id} - update process type
+DELETE /{id} - delete/deactivate process type
+Backend - Emails Router (backend/app/routers/emails.py):
+Fixed route ordering - moved /available-tasks before /{email_id} to prevent 422 errors.
+
+Frontend - New Component (frontend/src/components/SubtaskTemplates.jsx):
+Reusable component for managing subtask templates with drag & drop.
+
+Frontend - Settings (frontend/src/pages/Settings.jsx):
+Added process type CRUD functionality
+Integrated SubtaskTemplates component in expanded process view
+Added drag & drop reordering for processes
+Frontend - TaskDetail (frontend/src/pages/TaskDetail.jsx):
+Added "Alfeladatok" (Subtasks) section with progress bar
+Subtask list with status dropdowns
+Drag & drop reordering (subtaskDragIdx state)
+"Sablonból" (From template) button
+Add new subtask input
+Frontend - WebSocket Hook (frontend/src/hooks/useWebSocket.js):
+Changed to connect directly to ws://localhost:8000/ws in development mode.
+
+Frontend - Emails Page (frontend/src/pages/Emails.jsx):
+Fixed WebSocket URL for development mode.
+
+Frontend - Ideas Page (frontend/src/pages/Ideas.jsx):
+Fixed API endpoint: /v1/processes/types → /v1/processes
+
+Frontend - Vite Config (frontend/vite.config.ts):
+Removed problematic WebSocket proxy configuration.
+
+5. Solutions & Troubleshooting
+Problem 1: WebSocket Connection Failures
+Symptom: "Firefox cannot establish connection to ws://localhost:5173/ws" Solution: Changed frontend to connect directly to ws://localhost:8000/ws in dev mode instead of using Vite proxy.
+
+Problem 2: 422 Unprocessable Entity Errors
+Symptom: /api/v1/emails/available-tasks returning 422 Cause: FastAPI route ordering - /{email_id} was matching "available-tasks" as an ID Solution: Moved /available-tasks route definition before /{email_id}
+
+Problem 3: 500 Internal Server Error on Ideas Page
+Cause: Incorrect API endpoint /v1/processes/types instead of /v1/processes Solution: Fixed endpoint path in Ideas.jsx
+
+Problem 4: "module has no attribute 'router'" Error
+Symptom: Backend failed to start with AttributeError Cause: subtasks.py file was empty/not properly saved Solution: Rewrote the file using shell command (cat > file << 'EOF')
+
+Problem 5: Route Ordering in FastAPI
+Pattern: Static routes (like /reorder, /generate-from-template) MUST be defined BEFORE dynamic routes (/{id}) Applied to: processes.py, emails.py, subtasks.py
+
+6. Outstanding Work
+Completed in This Session:
+✅ Process type CRUD in Settings
+✅ Subtask template management in Settings → Processes
+✅ Subtask management in TaskDetail page
+✅ Drag & drop reordering for subtasks
+✅ Generate subtasks from template functionality
+✅ Progress bar for subtask completion
+Potential Future Enhancements:
+Subtask descriptions editing inline
+Due dates for subtasks
+Subtask assignment to users (if multi-user support added)
+Automatic status change for parent task when all subtasks complete
+Subtask templates with default status assignments
+To Run the Application:
+Terminal 1 (Backend):
+
+Potentially dangerous command
+Bash
+Run
+cd /home/bencelinux/workflow-manager/backend
+source venv/bin/activate
+alembic upgrade head  # Run migrations
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+Terminal 2 (Frontend):
+
+Potentially dangerous command
+Bash
+Run
+cd /home/bencelinux/workflow-manager/frontend
+npm run dev
+Access: http://localhost:5173

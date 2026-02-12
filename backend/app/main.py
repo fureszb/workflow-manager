@@ -20,6 +20,7 @@ from app.routers import (
     audit,
     tokens,
     websocket_router,
+    subtasks,
 )
 from app.services.scheduler import init_scheduler, shutdown_scheduler
 
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
         settings,
         audit,
         tokens,
+        subtasks,
     ]
 
     for module in routers:

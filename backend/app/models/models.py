@@ -54,6 +54,22 @@ class ProcessType(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
 
+    subtask_templates = relationship("ProcessTypeSubtask", back_populates="process_type", order_by="ProcessTypeSubtask.order")
+
+
+# --- Process type subtask templates (sablon alfeladatok) ---
+class ProcessTypeSubtask(Base):
+    __tablename__ = "process_type_subtasks"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    process_type_id = Column(Integer, ForeignKey("process_types.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    process_type = relationship("ProcessType", back_populates="subtask_templates")
+
 
 # --- Monthly process instances ---
 class ProcessInstance(Base):
@@ -75,6 +91,26 @@ class ProcessInstance(Base):
     status = relationship("StatusDefinition")
     files = relationship("ProcessFile", back_populates="process_instance")
     comments = relationship("ProcessComment", back_populates="process_instance")
+    subtasks = relationship("ProcessInstanceSubtask", back_populates="process_instance", order_by="ProcessInstanceSubtask.order")
+
+
+# --- Process instance subtasks (havi feladat alfeladatai) ---
+class ProcessInstanceSubtask(Base):
+    __tablename__ = "process_instance_subtasks"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    process_instance_id = Column(Integer, ForeignKey("process_instances.id"), nullable=False)
+    template_id = Column(Integer, ForeignKey("process_type_subtasks.id"), nullable=True)  # Lehet sablon alapú vagy egyedi
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    status_id = Column(Integer, ForeignKey("status_definitions.id"), nullable=True)
+    order = Column(Integer, default=0)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    process_instance = relationship("ProcessInstance", back_populates="subtasks")
+    template = relationship("ProcessTypeSubtask")
+    status = relationship("StatusDefinition")
 
 
 class ProcessFile(Base):

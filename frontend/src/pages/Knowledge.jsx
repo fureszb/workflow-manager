@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-
-const API_BASE = 'http://localhost:8000/api/v1';
+import toast from 'react-hot-toast';
+import api from '../utils/api';
 
 const Knowledge = () => {
   const [stats, setStats] = useState(null);
@@ -19,18 +19,19 @@ const Knowledge = () => {
     setLoading(true);
     try {
       const [statsRes, docsRes, logRes, personalityRes] = await Promise.all([
-        fetch(`${API_BASE}/ai/knowledge-stats`),
-        fetch(`${API_BASE}/ai/knowledge-documents`),
-        fetch(`${API_BASE}/ai/knowledge-log?limit=50`),
-        fetch(`${API_BASE}/ai/personality-log?limit=50`),
+        api.get('/v1/ai/knowledge-stats'),
+        api.get('/v1/ai/knowledge-documents'),
+        api.get('/v1/ai/knowledge-log?limit=50'),
+        api.get('/v1/ai/personality-log?limit=50'),
       ]);
 
-      if (statsRes.ok) setStats(await statsRes.json());
-      if (docsRes.ok) setDocuments(await docsRes.json());
-      if (logRes.ok) setKnowledgeLog(await logRes.json());
-      if (personalityRes.ok) setPersonalityLog(await personalityRes.json());
+      setStats(statsRes.data);
+      setDocuments(docsRes.data);
+      setKnowledgeLog(logRes.data);
+      setPersonalityLog(personalityRes.data);
     } catch (error) {
       console.error('Error fetching knowledge data:', error);
+      toast.error('Hiba az adatok betöltésekor');
     } finally {
       setLoading(false);
     }
@@ -41,20 +42,12 @@ const Knowledge = () => {
 
     setRemovingDocId(docId);
     try {
-      const response = await fetch(`${API_BASE}/ai/knowledge-documents/${docId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        // Refresh data
-        fetchData();
-      } else {
-        const error = await response.json();
-        alert(`Hiba: ${error.detail || 'Nem sikerült eltávolítani a dokumentumot'}`);
-      }
+      await api.delete(`/v1/ai/knowledge-documents/${docId}`);
+      toast.success('Dokumentum sikeresen eltávolítva!');
+      fetchData();
     } catch (error) {
       console.error('Error removing document:', error);
-      alert('Hiba történt a dokumentum eltávolításakor');
+      toast.error(error.response?.data?.detail || 'Hiba történt a dokumentum eltávolításakor');
     } finally {
       setRemovingDocId(null);
     }

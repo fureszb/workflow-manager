@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:8000/api/v1';
+import toast from 'react-hot-toast';
+import api from '../utils/api';
 
 // Status workflow: Új → Átgondolva → Megvalósítva / Elvetve
 const STATUSES = ['Új', 'Átgondolva', 'Megvalósítva', 'Elvetve'];
@@ -59,7 +58,6 @@ const Ideas = () => {
   const [processTypes, setProcessTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('');
@@ -70,6 +68,7 @@ const Ideas = () => {
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingIdea, setEditingIdea] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -87,11 +86,10 @@ const Ideas = () => {
       if (sourceFilter) params.append('source', sourceFilter);
       if (searchQuery) params.append('search', searchQuery);
 
-      const response = await axios.get(`${API_BASE}/ideas?${params.toString()}`);
+      const response = await api.get(`/v1/ideas?${params.toString()}`);
       setIdeas(response.data);
-      setError(null);
     } catch (err) {
-      setError('Hiba az ötletek betöltésekor');
+      toast.error('Hiba az ötletek betöltésekor');
       console.error(err);
     } finally {
       setLoading(false);
@@ -101,7 +99,7 @@ const Ideas = () => {
   // Fetch process types for dropdown
   const fetchProcessTypes = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/processes/types`);
+      const response = await api.get('/v1/processes/types');
       setProcessTypes(response.data);
     } catch (err) {
       console.error('Error fetching process types:', err);
@@ -124,11 +122,14 @@ const Ideas = () => {
   // Create or update idea
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       if (editingIdea) {
-        await axios.put(`${API_BASE}/ideas/${editingIdea.id}`, formData);
+        await api.put(`/v1/ideas/${editingIdea.id}`, formData);
+        toast.success('Ötlet sikeresen mentve!');
       } else {
-        await axios.post(`${API_BASE}/ideas`, formData);
+        await api.post('/v1/ideas', formData);
+        toast.success('Ötlet sikeresen létrehozva!');
       }
       setShowModal(false);
       setEditingIdea(null);
@@ -136,7 +137,9 @@ const Ideas = () => {
       fetchIdeas();
     } catch (err) {
       console.error('Error saving idea:', err);
-      setError('Hiba az ötlet mentésekor');
+      toast.error(err.response?.data?.detail || 'Hiba az ötlet mentésekor');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -144,22 +147,24 @@ const Ideas = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Biztosan törölni szeretnéd ezt az ötletet?')) return;
     try {
-      await axios.delete(`${API_BASE}/ideas/${id}`);
+      await api.delete(`/v1/ideas/${id}`);
+      toast.success('Ötlet sikeresen törölve!');
       fetchIdeas();
     } catch (err) {
       console.error('Error deleting idea:', err);
-      setError('Hiba az ötlet törlésekor');
+      toast.error('Hiba az ötlet törlésekor');
     }
   };
 
   // Update status
   const handleStatusChange = async (idea, newStatus) => {
     try {
-      await axios.put(`${API_BASE}/ideas/${idea.id}`, { status: newStatus });
+      await api.put(`/v1/ideas/${idea.id}`, { status: newStatus });
+      toast.success('Státusz frissítve!');
       fetchIdeas();
     } catch (err) {
       console.error('Error updating status:', err);
-      setError('Hiba a státusz frissítésekor');
+      toast.error('Hiba a státusz frissítésekor');
     }
   };
 
@@ -167,16 +172,16 @@ const Ideas = () => {
   const handleGenerateIdeas = async () => {
     try {
       setGenerating(true);
-      const response = await axios.post(`${API_BASE}/ideas/generate?max_ideas=5`);
+      const response = await api.post('/v1/ideas/generate?max_ideas=5');
       if (response.data.success) {
         fetchIdeas();
-        alert(`${response.data.generated_count} új ötlet generálva!`);
+        toast.success(`${response.data.generated_count} új ötlet generálva!`);
       } else {
-        setError(response.data.message);
+        toast.error(response.data.message);
       }
     } catch (err) {
       console.error('Error generating ideas:', err);
-      setError('Hiba az ötletek generálásakor');
+      toast.error('Hiba az ötletek generálásakor');
     } finally {
       setGenerating(false);
     }
@@ -342,19 +347,6 @@ const Ideas = () => {
           </div>
         </div>
       </div>
-
-      {/* Error message */}
-      {error && (
-        <div
-          className="p-4 rounded-lg"
-          style={{ backgroundColor: 'var(--error)' + '20', color: 'var(--error)' }}
-        >
-          {error}
-          <button onClick={() => setError(null)} className="ml-4 underline">
-            Bezár
-          </button>
-        </div>
-      )}
 
       {/* Ideas Grid */}
       {loading ? (
@@ -600,6 +592,7 @@ const Ideas = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
+                  disabled={submitting}
                   className="px-4 py-2 rounded-lg"
                   style={{
                     backgroundColor: 'var(--bg-secondary)',
@@ -610,10 +603,15 @@ const Ideas = () => {
                 </button>
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                  style={{
+                    backgroundColor: 'var(--accent)',
+                    color: 'white',
+                    opacity: submitting ? 0.6 : 1,
+                  }}
                 >
-                  {editingIdea ? 'Mentés' : 'Létrehozás'}
+                  {submitting ? 'Mentés...' : (editingIdea ? 'Mentés' : 'Létrehozás')}
                 </button>
               </div>
             </form>

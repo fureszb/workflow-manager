@@ -85,6 +85,9 @@ const Chat = () => {
   // WebSocket ref
   const wsRef = useRef(null);
 
+  // Ref to track accumulated streaming content (avoids closure issues)
+  const streamingContentRef = useRef('');
+
   // Refs
   const messagesEndRef = useRef(null);
   const modelDropdownRef = useRef(null);
@@ -232,6 +235,7 @@ const Chat = () => {
     setInputValue('');
     setSending(true);
     setStreamingContent('');
+    streamingContentRef.current = '';
 
     // Optimistically add user message
     const tempUserMessage = {
@@ -272,6 +276,8 @@ const Chat = () => {
 
           if (data.done && data.assistant_message_id) {
             // Final message - replace temp message and add assistant message
+            // Use ref value to avoid closure issues with stale streamingContent
+            const finalContent = streamingContentRef.current;
             setMessages((prev) => {
               const filtered = prev.filter((m) => m.id !== tempUserMessage.id);
               return [
@@ -286,16 +292,18 @@ const Chat = () => {
                 {
                   id: data.assistant_message_id,
                   role: 'assistant',
-                  content: streamingContent,
+                  content: finalContent,
                   created_at: new Date().toISOString(),
                   tokens_used: data.output_tokens,
                 },
               ];
             });
             setStreamingContent('');
+            streamingContentRef.current = '';
             setSending(false);
             ws.close();
           } else if (data.token) {
+            streamingContentRef.current += data.token;
             setStreamingContent((prev) => prev + data.token);
           }
         } catch (e) {
@@ -315,7 +323,7 @@ const Chat = () => {
       // Fallback to non-streaming endpoint
       fallbackToNonStreaming(content.trim(), tempUserMessage);
     }
-  }, [activeConversation, sending, useRag, streamingContent]);
+  }, [activeConversation, sending, useRag]);
 
   const fallbackToNonStreaming = async (content, tempUserMessage) => {
     try {

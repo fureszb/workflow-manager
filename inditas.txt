@@ -1,0 +1,234 @@
+Most már átlátom a projektet. Íme a **teljes, lépésről-lépésre útmutató** kezdőknek:
+
+---
+
+# 🚀 Projekt Indítási Útmutató (Ubuntu 24 LTS)
+
+## 📋 Mi ez a projekt?
+Ez egy **Workflow Manager** alkalmazás, ami tartalmaz:
+- **Frontend** = A webes felület (amit a böngészőben látsz) - React + Vite
+- **Backend** = A "motorja" az alkalmazásnak - Python FastAPI
+- **MySQL** = Az adatbázis, ahol az adatok tárolódnak
+
+---
+
+## 🔧 1. LÉPÉS: Szükséges programok telepítése
+
+Nyiss egy terminált (Ctrl+Alt+T) és másold be ezeket **egymás után**:
+
+### 1.1 Rendszer frissítése
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+### 1.2 Node.js telepítése (a frontendhez kell)
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+Ellenőrizd, hogy sikerült:
+```bash
+node --version
+npm --version
+```
+(Mindkettőnek ki kell írnia egy verziószámot)
+
+### 1.3 Python telepítése (a backendhez kell)
+```bash
+sudo apt install -y python3 python3-pip python3-venv
+```
+
+Ellenőrizd:
+```bash
+python3 --version
+```
+
+### 1.4 MySQL telepítése (adatbázis)
+```bash
+sudo apt install -y mysql-server
+```
+
+MySQL elindítása:
+```bash
+sudo systemctl start mysql
+sudo systemctl enable mysql
+```
+
+---
+
+## 🗄️ 2. LÉPÉS: MySQL adatbázis beállítása
+
+### 2.1 Belépés MySQL-be (adminként)
+```bash
+sudo mysql
+```
+
+### 2.2 Adatbázis és felhasználó létrehozása
+A MySQL promptban (ahol `mysql>` látod) másold be ezt **egyben**:
+
+```sql
+CREATE DATABASE workflow_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'testuser'@'localhost' IDENTIFIED BY '1122';
+GRANT ALL PRIVILEGES ON workflow_manager.* TO 'testuser'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+Ez létrehozza:
+- `workflow_manager` nevű adatbázist
+- `testuser` nevű felhasználót `1122` jelszóval
+
+---
+
+## 📁 3. LÉPÉS: Menj a projekt mappájába
+
+```bash
+cd /a/projekt/mappájának/elérési/útja
+```
+
+(Cseréld ki arra az útvonalra, ahol a projekt van!)
+
+---
+
+## 🐍 4. LÉPÉS: Backend beállítása és indítása
+
+### 4.1 Lépj be a backend mappába
+```bash
+cd backend
+```
+
+### 4.2 Python virtuális környezet létrehozása
+```bash
+python3 -m venv venv
+```
+
+### 4.3 Virtuális környezet aktiválása
+```bash
+source venv/bin/activate
+```
+(Most a terminál elején megjelenik: `(venv)`)
+
+### 4.4 Python csomagok telepítése
+```bash
+pip install -r requirements.txt
+pip install pydantic-settings
+```
+
+### 4.5 Adatbázis táblák létrehozása (migrációk)
+```bash
+alembic upgrade head
+```
+
+### 4.6 (Opcionális) Teszt adatok betöltése
+```bash
+python seed_data.py
+```
+
+### 4.7 Backend indítása
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+✅ **Ha minden jól ment**, ezt fogod látni:
+```
+INFO:     Uvicorn running on http://0.0.0.0:8000
+INFO:     Application startup complete.
+```
+
+**⚠️ NE ZÁRD BE ezt a terminált! Hagyd futni!**
+
+---
+
+## 🌐 5. LÉPÉS: Frontend beállítása és indítása
+
+### 5.1 Nyiss egy ÚJ terminált (Ctrl+Alt+T)
+
+### 5.2 Menj a projekt frontend mappájába
+```bash
+cd /a/projekt/mappájának/elérési/útja/frontend
+```
+
+### 5.3 Node csomagok telepítése
+```bash
+npm install
+```
+(Ez pár percig eltarthat)
+
+### 5.4 Frontend indítása
+```bash
+npm run dev
+```
+
+✅ **Ha minden jól ment**, ezt látod:
+```
+  VITE v7.x.x  ready in xxx ms
+
+  ➜  Local:   http://localhost:5173/
+```
+
+---
+
+## 🎉 6. LÉPÉS: Alkalmazás megnyitása
+
+Nyisd meg a böngészőt és írd be:
+```
+http://localhost:5173
+```
+
+**🎊 Kész! Az alkalmazásnak működnie kell!**
+
+---
+
+## 📊 Összefoglaló - Mit futtatsz?
+
+| Terminál | Mi fut benne? | Parancs |
+|----------|--------------|---------|
+| 1. terminál | Backend (Python) | `uvicorn app.main:app --reload` |
+| 2. terminál | Frontend (React) | `npm run dev` |
+| Háttérben | MySQL adatbázis | automatikusan fut |
+
+---
+
+## 🆘 Gyakori hibák és megoldásuk
+
+### ❌ "Connection refused" hiba
+→ Ellenőrizd, hogy fut-e a MySQL:
+```bash
+sudo systemctl status mysql
+```
+
+### ❌ "Access denied for user 'testuser'"
+→ A MySQL felhasználó nincs jól beállítva. Ismételd meg a 2. lépést.
+
+### ❌ "Module not found" hiba a backendnél
+→ Aktiváltad a virtuális környezetet?
+```bash
+source venv/bin/activate
+```
+
+### ❌ "npm: command not found"
+→ Node.js nincs telepítve. Ismételd meg az 1.2 lépést.
+
+---
+
+## 🔄 Legközelebb hogyan indítsd?
+
+Ha már egyszer mindent beállítottál, legközelebb csak ennyi kell:
+
+**1. terminál (Backend):**
+```bash
+cd /projekt/backend
+source venv/bin/activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**2. terminál (Frontend):**
+```bash
+cd /projekt/frontend
+npm run dev
+```
+
+---
+
+Van még kérdésed? Szívesen segítek! 😊

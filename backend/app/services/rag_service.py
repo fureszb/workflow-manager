@@ -29,7 +29,7 @@ os.makedirs(FAISS_INDEX_DIR, exist_ok=True)
 
 # Default settings
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_EMBEDDING_MODEL = "nomic-embed-text"  # Common embedding model for Ollama
+DEFAULT_EMBEDDING_MODEL = "snowflake-arctic-embed2"  # Multilingual embedding model (magyar+angol)
 MAX_TOKENS_PER_CHUNK = 500
 CHARS_PER_TOKEN_ESTIMATE = 3.5  # Rough estimate for Hungarian/English mixed text
 

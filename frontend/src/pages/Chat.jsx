@@ -21,6 +21,7 @@ import {
   Zap,
   Search,
   X,
+  Square,
 } from 'lucide-react';
 
 const inputStyle = {
@@ -327,6 +328,30 @@ const Chat = () => {
       fallbackToNonStreaming(content.trim(), tempUserMessage);
     }
   }, [activeConversation, sending, useRag, documentsOnly]);
+
+  const stopGeneration = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    // Keep whatever was streamed so far
+    if (streamingContentRef.current) {
+      const partialContent = streamingContentRef.current + '\n\n*(generálás megszakítva)*';
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `stopped-${Date.now()}`,
+          role: 'assistant',
+          content: partialContent,
+          created_at: new Date().toISOString(),
+          tokens_used: 0,
+        },
+      ]);
+    }
+    setStreamingContent('');
+    streamingContentRef.current = '';
+    setSending(false);
+  }, []);
 
   const fallbackToNonStreaming = async (content, tempUserMessage) => {
     try {
@@ -821,19 +846,27 @@ const Chat = () => {
               disabled={sending}
               data-testid="chat-input"
             />
-            <button
-              onClick={sendMessage}
-              disabled={!inputValue.trim() || sending}
-              className="px-4 py-2 rounded transition-colors disabled:opacity-50"
-              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
-              data-testid="send-button"
-            >
-              {sending ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
+            {sending ? (
+              <button
+                onClick={stopGeneration}
+                className="px-4 py-2 rounded transition-colors"
+                style={{ backgroundColor: '#dc2626', color: 'white' }}
+                data-testid="stop-button"
+                title="Generálás leállítása"
+              >
+                <Square size={20} fill="white" />
+              </button>
+            ) : (
+              <button
+                onClick={sendMessage}
+                disabled={!inputValue.trim()}
+                className="px-4 py-2 rounded transition-colors disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                data-testid="send-button"
+              >
                 <Send size={20} />
-              )}
-            </button>
+              </button>
+            )}
           </div>
         </div>
       </div>

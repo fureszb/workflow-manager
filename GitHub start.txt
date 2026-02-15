@@ -1,0 +1,52 @@
+
+🛠️ 1. Lépés: Adatbázis „életre keltése”
+A Codespace termináljába másold be ezt (ez elindítja a MySQL-t, amit alapból nem tesz meg a rendszer):
+
+sudo service mysql start
+
+Ezután jöhet a dokumentációd 2.2-es pontja (Adatbázis létrehozása). Mivel a Codespace-ben root felhasználóként vagy, elég ennyi:
+
+sudo mysql -e "CREATE DATABASE workflow_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER 'testuser'@'localhost' IDENTIFIED BY '1122'; GRANT ALL PRIVILEGES ON workflow_manager.* TO 'testuser'@'localhost'; FLUSH PRIVILEGES;"
+
+🐍 2. Lépés: Backend és Frontend indítása (EGYSZERRE)
+Hogy ne kelljen két külön terminállal bajlódnod a kollégák előtt, használhatunk egy "one-liner" parancsot, ami mindent elintéz.
+Ezt másold be a fő mappában:
+
+# Backend indítása a háttérben, majd a Frontend indítása
+(cd backend && source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000) & (cd frontend && npm run dev)
+
+Mi fog történni?
+ * A Backend elindul a háttérben a 8000-es porton.
+ * A Frontend elindul az 5173-as porton.
+ * A VS Code jobb alsó sarkában felugrik egy ablak: "A process is running on port 5173. Open in Browser".
+
+🌍 3. LÉPÉS: A "Varázslat" (Port Forwarding)
+A Codespaces-ben a localhost:5173 nem fog működni a laptopod böngészőjében közvetlenül.
+ * Kattints a VS Code terminálja feletti Ports fülre.
+ * Látni fogsz két portot: 5173 (Frontend) és 8000 (Backend).
+ * A 5173-as sorban kattints a Földgömb ikonra (Open in Browser).
+ * Fontos: A 8000-es port (Backend) láthatóságát (Visibility) állítsd át Public-ra (jobb klikk a porton -> Port Visibility -> Public). Erre azért van szükség, hogy a frontend elérje az API-t a felhőn keresztül.
+
+💡 Pro Tipp a prezentációhoz: Az "Indító Script"
+Hogy ne a kollégák előtt kelljen gépelned ezeket a hosszú parancsokat, hozz létre egy fájlt a projekt gyökerében start_app.sh néven:
+
+#!/bin/bash
+echo "🚀 Adatbázis indítása..."
+sudo service mysql start
+
+echo "🐍 Backend indítása..."
+cd backend && source venv/bin/activate
+# Migráció futtatása, ha kell
+alembic upgrade head
+uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+
+echo "🌐 Frontend indítása..."
+cd ../frontend
+npm run dev
+
+Használat a bemutatón:
+Csak írd be a terminálba: bash start_app.sh – és dőlj hátra, minden elindul magától.
+Még egy apróság:
+A dokumentációd említi a WebSocket hibát. A Codespaces URL-jei (pl. https://valami-5173.app.github.dev) HTTPS-t használnak, ezért a WebSocketnek is WSS-nek kellene lennie.
+Ha a bemutató alatt nem csatlakozna a WebSocket, ne ijedj meg: a legtöbb funkció (CRUD) enélkül is működni fog a prezentációhoz!
+Szeretnéd, hogy segíjek megírni azt a kódrészletet, ami automatikusan felismeri, hogy Codespace-ben vagy-e, és ahhoz igazítja az API címet?

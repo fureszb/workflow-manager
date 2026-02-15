@@ -131,6 +131,7 @@ def build_message_history(
 class SendMessageRequest(BaseModel):
     content: str
     system_prompt: Optional[str] = None
+    documents_only: Optional[bool] = False  # Ha True, csak dokumentumokból válaszol
 
 
 class SendMessageResponse(BaseModel):
@@ -327,41 +328,67 @@ def delete_conversation(conv_id: int, db: Session = Depends(get_db)):
 RAG_TOP_K = 5  # Number of similar chunks to retrieve
 RAG_MIN_SCORE = 0.3  # Minimum similarity score to include
 
+# Strict RAG system prompt that prevents hallucination
+STRICT_RAG_SYSTEM_PROMPT = """Te egy dokumentum-alapú AI asszisztens vagy.
 
-async def build_rag_context(query: str, db: Session) -> str:
+FELADATOD: Válaszolj a felhasználó kérdésére KIZÁRÓLAG az alább megadott DOKUMENTUM KONTEXTUS alapján.
+
+SZABÁLYOK:
+- Használd a DOKUMENTUM KONTEXTUS-ban található információkat a válaszodhoz.
+- Ha a kontextusban megtalálod az információt, válaszolj értelmesen és magyarul.
+- Hivatkozz a forrás dokumentumra (pl. "A dokumentum szerint...").
+- Ha a kontextusban TÉNYLEG nincs válasz, akkor mondd: "Sajnos erre nem találtam információt a dokumentumokban."
+- NE találj ki információt a saját tudásodból!"""
+
+# Normal RAG system prompt (allows general knowledge if no context found)
+NORMAL_RAG_SYSTEM_PROMPT = """Te egy segítőkész AI asszisztens vagy. Ha kapsz dokumentum kontextust, 
+próbáld azt felhasználni a válaszodban és hivatkozz a forrásra. 
+Ha nincs releváns kontextus, válaszolhatsz a saját tudásod alapján is, 
+de jelezd hogy ez nem a dokumentumokból származik."""
+
+
+async def build_rag_context(query: str, db: Session, documents_only: bool = False) -> tuple:
     """Build RAG context from similar document chunks.
 
     Args:
         query: The user's question
         db: Database session
+        documents_only: If True, use stricter matching for documents-only mode
 
     Returns:
-        Formatted context string with relevant document chunks
+        Tuple of (formatted context string, has_relevant_context boolean)
     """
     try:
-        results = await search_similar_chunks(query, db, k=RAG_TOP_K)
+        # Use more results for documents_only mode to increase chances of finding relevant content
+        k = RAG_TOP_K * 2 if documents_only else RAG_TOP_K
+        results = await search_similar_chunks(query, db, k=k)
 
         if not results:
-            return ""
+            return "", False
 
+        # Use lower threshold for documents_only to get more potential matches
+        min_score = RAG_MIN_SCORE * 0.8 if documents_only else RAG_MIN_SCORE
+        
         # Filter by minimum score and build context
-        relevant_chunks = [r for r in results if r.get("score", 0) >= RAG_MIN_SCORE]
+        relevant_chunks = [r for r in results if r.get("score", 0) >= min_score]
 
         if not relevant_chunks:
-            return ""
+            return "", False
 
-        context_parts = ["Releváns kontextus a tudásbázisból:\n"]
-        for chunk in relevant_chunks:
+        context_parts = ["\n\nDOKUMENTUM KONTEXTUS (használd ezt a válaszhoz):"]
+        context_parts.append("="*50)
+        for i, chunk in enumerate(relevant_chunks, 1):
             filename = chunk.get("document_filename", "Ismeretlen")
             content = chunk.get("content", "")
-            score = chunk.get("score", 0)
-            context_parts.append(f"[{filename} (relevancia: {score:.2f})]\n{content}\n")
+            context_parts.append(f"\n[Részlet {i} - {filename}]\n{content}")
+        context_parts.append("\n" + "="*50)
+        context_parts.append("KONTEXTUS VÉGE - Válaszolj a fenti információk alapján!")
 
-        return "\n".join(context_parts)
+        return "\n".join(context_parts), True
     except Exception as e:
         # Silently fail if RAG is not available
         print(f"RAG context error: {e}")
-        return ""
+        return "", False
 
 
 async def stream_ollama_response(
@@ -526,6 +553,7 @@ async def stream_message(websocket: WebSocket, conv_id: int):
 
             content = data.get("content", "").strip()
             use_rag = data.get("use_rag", True)
+            documents_only = data.get("documents_only", False)
 
             if not content:
                 await websocket.send_json({"error": "Üres üzenet"})
@@ -547,8 +575,9 @@ async def stream_message(websocket: WebSocket, conv_id: int):
 
             # Build RAG context if enabled
             rag_context = ""
-            if use_rag:
-                rag_context = await build_rag_context(content, db)
+            has_context = False
+            if use_rag or documents_only:
+                rag_context, has_context = await build_rag_context(content, db, documents_only)
 
             # Get settings and provider
             settings = get_ai_settings(db)
@@ -557,18 +586,22 @@ async def stream_message(websocket: WebSocket, conv_id: int):
             # Get system prompt from personality settings
             personality_prompt = get_personality_system_prompt(db, provider)
 
-            # Build system prompt combining personality and RAG context
-            system_prompt = personality_prompt
-            if rag_context:
-                rag_prompt = f"""Használd a következő kontextust a válaszod megalkotásához, ha releváns:
-
-{rag_context}
-
-Ha a kontextus nem releváns a kérdéshez, válaszolj a saját tudásod alapján."""
-                if system_prompt:
-                    system_prompt = f"{system_prompt}\n\n{rag_prompt}"
+            # Build system prompt based on mode
+            if documents_only:
+                # Strict mode: only answer from documents, no hallucination
+                if has_context:
+                    system_prompt = f"{STRICT_RAG_SYSTEM_PROMPT}\n\n{rag_context}"
                 else:
-                    system_prompt = f"Te egy segítőkész AI asszisztens vagy.\n{rag_prompt}"
+                    # No context found in documents_only mode
+                    system_prompt = STRICT_RAG_SYSTEM_PROMPT + "\n\nFIGYELEM: Nem találtam releváns dokumentumot a tudásbázisban ehhez a kérdéshez. Válaszolj ennek megfelelően."
+            elif has_context:
+                # Normal RAG mode with context found
+                system_prompt = f"{NORMAL_RAG_SYSTEM_PROMPT}\n\n{rag_context}"
+                if personality_prompt:
+                    system_prompt = f"{personality_prompt}\n\n{system_prompt}"
+            else:
+                # No RAG or no context - use personality or default
+                system_prompt = personality_prompt or "Te egy segítőkész AI asszisztens vagy."
 
             try:
                 full_response = ""
@@ -667,7 +700,11 @@ async def send_message_with_rag(
     request: SendMessageRequest,
     db: Session = Depends(get_db),
 ):
-    """Send a message with RAG context (non-streaming version)."""
+    """Send a message with RAG context (non-streaming version).
+    
+    If request.documents_only is True, the AI will ONLY answer from documents
+    and will explicitly say if information is not found (no hallucination).
+    """
     conversation = db.query(ChatConversation).filter(
         ChatConversation.id == conv_id
     ).first()
@@ -690,25 +727,31 @@ async def send_message_with_rag(
     message_history = build_message_history(db, conv_id)
 
     # Build RAG context
-    rag_context = await build_rag_context(request.content, db)
+    documents_only = request.documents_only or False
+    rag_context, has_context = await build_rag_context(request.content, db, documents_only)
 
     # Get provider
     provider = conversation.ai_provider or "ollama"
 
     # Get system prompt from personality settings (request.system_prompt can override)
-    system_prompt = request.system_prompt or get_personality_system_prompt(db, provider)
+    personality_prompt = request.system_prompt or get_personality_system_prompt(db, provider)
 
-    # Add RAG context to system prompt if available
-    if rag_context:
-        rag_prompt = f"""Használd a következő kontextust a válaszod megalkotásához, ha releváns:
-
-{rag_context}
-
-Ha a kontextus nem releváns a kérdéshez, válaszolj a saját tudásod alapján."""
-        if system_prompt:
-            system_prompt = f"{system_prompt}\n\n{rag_prompt}"
+    # Build system prompt based on mode
+    if documents_only:
+        # Strict mode: only answer from documents, no hallucination
+        if has_context:
+            system_prompt = f"{STRICT_RAG_SYSTEM_PROMPT}\n\n{rag_context}"
         else:
-            system_prompt = f"Te egy segítőkész AI asszisztens vagy.\n{rag_prompt}"
+            # No context found in documents_only mode
+            system_prompt = STRICT_RAG_SYSTEM_PROMPT + "\n\nFIGYELEM: Nem találtam releváns dokumentumot a tudásbázisban ehhez a kérdéshez. Válaszolj ennek megfelelően."
+    elif has_context:
+        # Normal RAG mode with context found
+        system_prompt = f"{NORMAL_RAG_SYSTEM_PROMPT}\n\n{rag_context}"
+        if personality_prompt:
+            system_prompt = f"{personality_prompt}\n\n{system_prompt}"
+    else:
+        # No RAG or no context - use personality or default
+        system_prompt = personality_prompt or "Te egy segítőkész AI asszisztens vagy."
 
     # Get AI response
     try:

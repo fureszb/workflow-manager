@@ -77,6 +77,8 @@ const Chat = () => {
 
   // RAG toggle
   const [useRag, setUseRag] = useState(true);
+  // Documents only mode - prevents hallucination
+  const [documentsOnly, setDocumentsOnly] = useState(false);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -259,6 +261,7 @@ const Chat = () => {
         ws.send(JSON.stringify({
           content: content.trim(),
           use_rag: useRag,
+          documents_only: documentsOnly,
         }));
       };
 
@@ -323,13 +326,13 @@ const Chat = () => {
       // Fallback to non-streaming endpoint
       fallbackToNonStreaming(content.trim(), tempUserMessage);
     }
-  }, [activeConversation, sending, useRag]);
+  }, [activeConversation, sending, useRag, documentsOnly]);
 
   const fallbackToNonStreaming = async (content, tempUserMessage) => {
     try {
       const res = await api.post(
         `/v1/chat/conversations/${activeConversation.id}/message-with-rag`,
-        { content }
+        { content, documents_only: documentsOnly }
       );
 
       setMessages((prev) =>
@@ -498,7 +501,10 @@ const Chat = () => {
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
             useRag ? 'bg-opacity-50' : ''
           }`}
-          onClick={() => setUseRag(!useRag)}
+          onClick={() => {
+            setUseRag(!useRag);
+            if (!useRag) setDocumentsOnly(false); // Reset documents only when disabling RAG
+          }}
           style={{
             ...cardStyle,
             backgroundColor: useRag ? 'var(--accent)' : 'var(--bg-secondary)',
@@ -512,6 +518,26 @@ const Chat = () => {
             RAG
           </span>
         </div>
+
+        {/* Documents Only toggle - prevents hallucination */}
+        {useRag && (
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors`}
+            onClick={() => setDocumentsOnly(!documentsOnly)}
+            style={{
+              ...cardStyle,
+              backgroundColor: documentsOnly ? '#dc2626' : 'var(--bg-secondary)',
+              borderColor: documentsOnly ? '#dc2626' : 'var(--border-color)',
+            }}
+            data-testid="documents-only-toggle"
+            title="Csak dokumentumokból válaszol - nincs hallucináció"
+          >
+            <Sparkles size={14} style={{ color: documentsOnly ? 'white' : 'var(--text-secondary)' }} />
+            <span className="text-xs font-medium" style={{ color: documentsOnly ? 'white' : 'var(--text-primary)' }}>
+              Csak dok.
+            </span>
+          </div>
+        )}
 
         {/* Provider toggle */}
         <div

@@ -328,23 +328,28 @@ def delete_conversation(conv_id: int, db: Session = Depends(get_db)):
 RAG_TOP_K = 5  # Number of similar chunks to retrieve
 RAG_MIN_SCORE = 0.3  # Minimum similarity score to include
 
-# Strict RAG system prompt that prevents hallucination
-STRICT_RAG_SYSTEM_PROMPT = """Te egy dokumentum-alapú AI asszisztens vagy.
+# Strict RAG system prompt that prevents hallucination - MUST refuse to answer from general knowledge
+STRICT_RAG_SYSTEM_PROMPT = """Te egy dokumentum-alapú AI asszisztens vagy a tudásbázisból.
 
-FELADATOD: Válaszolj a felhasználó kérdésére KIZÁRÓLAG az alább megadott DOKUMENTUM KONTEXTUS alapján.
+⚠️ KRITIKUS SZABÁLYOK:
+1. KIZÁRÓLAG az alábbi DOKUMENTUM KONTEXTUS alapján válaszolj
+2. Ha az információ NEM van a kontextusban, akkor TILOS válaszolni
+3. Soha NE használd a saját tudásodat vagy általános ismereteidet
+4. Ha nem tudod a választ, akkor mondd egyértelműen: "Sajnos még nem találtam rá választ a dokumentumok között."
 
-SZABÁLYOK:
-- Használd a DOKUMENTUM KONTEXTUS-ban található információkat a válaszodhoz.
-- Ha a kontextusban megtalálod az információt, válaszolj értelmesen és magyarul.
-- Hivatkozz a forrás dokumentumra (pl. "A dokumentum szerint...").
-- Ha a kontextusban TÉNYLEG nincs válasz, akkor mondd: "Sajnos erre nem találtam információt a dokumentumokban."
-- NE találj ki információt a saját tudásodból!"""
+MŰKÖDÉSI MÓDOD:
+- ✓ Használhatod a KONTEXTUS információit
+- ✓ Hivatkozhatsz a dokumentumokra
+- ✗ NE fabrikálj információt
+- ✗ NE válaszolj a saját tudásodból
+- ✗ NE tegyél fel olyannak, hogy a dokumentumban van információ, ha nincs
+
+Válaszolj magyarul."""
 
 # Normal RAG system prompt (allows general knowledge if no context found)
-NORMAL_RAG_SYSTEM_PROMPT = """Te egy segítőkész AI asszisztens vagy. Ha kapsz dokumentum kontextust, 
-próbáld azt felhasználni a válaszodban és hivatkozz a forrásra. 
-Ha nincs releváns kontextus, válaszolhatsz a saját tudásod alapján is, 
-de jelezd hogy ez nem a dokumentumokból származik."""
+NORMAL_RAG_SYSTEM_PROMPT = """Te egy segítőkész AI asszisztens vagy.
+Ha van dokumentum kontextus, azt elsősorban használd és hivatkozz a forrásra.
+Ha nincs megfelelő kontextus, akkor válaszolhatsz az általános tudásod alapján."""
 
 
 async def build_rag_context(query: str, db: Session, documents_only: bool = False) -> tuple:

@@ -11,6 +11,14 @@ const Knowledge = () => {
   const [activeTab, setActiveTab] = useState('documents');
   const [removingDocId, setRemovingDocId] = useState(null);
 
+  // RAG Debug state
+  const [ragStatus, setRagStatus] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [selectedDocChunks, setSelectedDocChunks] = useState(null);
+  const [loadingChunks, setLoadingChunks] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -18,17 +26,21 @@ const Knowledge = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, docsRes, logRes, personalityRes] = await Promise.all([
+      const [statsRes, docsRes, logRes, personalityRes, ragStatusRes] = await Promise.all([
         api.get('/v1/ai/knowledge-stats'),
         api.get('/v1/ai/knowledge-documents'),
         api.get('/v1/ai/knowledge-log?limit=50'),
         api.get('/v1/ai/personality-log?limit=50'),
+        api.get('/v1/rag-debug/status').catch(() => null), // RAG debug might not be available
       ]);
 
       setStats(statsRes.data);
       setDocuments(docsRes.data);
       setKnowledgeLog(logRes.data);
       setPersonalityLog(personalityRes.data);
+      if (ragStatusRes) {
+        setRagStatus(ragStatusRes.data);
+      }
     } catch (error) {
       console.error('Error fetching knowledge data:', error);
       toast.error('Hiba az adatok betöltésekor');
@@ -50,6 +62,55 @@ const Knowledge = () => {
       toast.error(error.response?.data?.detail || 'Hiba történt a dokumentum eltávolításakor');
     } finally {
       setRemovingDocId(null);
+    }
+  };
+
+  const handleTestSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) {
+      toast.error('Adjon meg egy keresési kifejezést');
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const res = await api.post('/v1/rag-debug/test-search', {}, {
+        params: { query: searchQuery, k: 5, min_score: 0.0 }
+      });
+      setSearchResults(res.data);
+    } catch (error) {
+      console.error('Error testing search:', error);
+      toast.error('Hiba a keresés során');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleViewChunks = async (docId) => {
+    setLoadingChunks(true);
+    try {
+      const res = await api.get(`/v1/rag-debug/chunks/${docId}`);
+      setSelectedDocChunks(res.data);
+    } catch (error) {
+      console.error('Error loading chunks:', error);
+      toast.error('Hiba a chunk-ok betöltésekor');
+    } finally {
+      setLoadingChunks(false);
+    }
+  };
+
+  const handleReindexDocument = async (docId) => {
+    if (!confirm('Újraindexálja ezt a dokumentumot?')) return;
+    try {
+      const res = await api.post(`/v1/rag-debug/reindex-document/${docId}`);
+      if (res.data.success) {
+        toast.success(`${res.data.chunks_created} chunk indexelve`);
+        fetchData();
+      } else {
+        toast.error(res.data.error || 'Hiba az indexelés során');
+      }
+    } catch (error) {
+      toast.error('Hiba az indexelés során');
     }
   };
 
@@ -231,6 +292,7 @@ const Knowledge = () => {
         <div className="flex gap-4">
           {[
             { id: 'documents', label: 'Tudásbázis dokumentumok' },
+            { id: 'rag-debug', label: 'RAG Debug & Keresés' },
             { id: 'learning-log', label: 'Tanulási napló' },
             { id: 'personality-log', label: 'Személyiség változások' },
           ].map((tab) => (
@@ -339,6 +401,75 @@ const Knowledge = () => {
                 </tbody>
               </table>
             )}
+          </div>
+        )}
+
+        {/* RAG Debug Tab */}
+        {activeTab === 'rag-debug' && ragStatus && (
+          <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            {/* Index Status Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded p-3 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>
+                  {ragStatus.indexed_documents}
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Indexelt dokumenumok</div>
+              </div>
+              <div className="rounded p-3 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>
+                  {ragStatus.total_chunks}
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Chunks összesen</div>
+              </div>
+              <div className="rounded p-3 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>
+                  {ragStatus.total_vectors}
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Vektorok</div>
+              </div>
+              <div className="rounded p-3 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                <div className="text-sm" style={{ color: 'var(--accent)' }}>
+                  {ragStatus.faiss_dimension || 'N/A'}
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Dimenzió</div>
+              </div>
+            </div>
+
+            {/* Test Search Form */}
+            <div>
+              <h4 className="font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>🔍 Test Search</h4>
+              <form onSubmit={handleTestSearch} className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Keresési kifejezés..."
+                  className="flex-1 px-3 py-2 text-sm rounded border"
+                  style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                />
+                <button type="submit" disabled={searching} className="px-4 py-2 text-sm rounded font-medium" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
+                  {searching ? '...' : 'OK'}
+                </button>
+              </form>
+
+              {searchResults && (
+                <div className="bg-opacity-50 p-3 rounded" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <div className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    {searchResults.results_count} találat
+                  </div>
+                  {searchResults.results.map((r, i) => (
+                    <div key={i} className="text-xs p-2 mb-2 rounded border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }} >
+                      <div style={{ color: 'var(--text-primary)' }}>
+                        <strong>{r.document_filename}</strong> (#{r.chunk_index}, score: {(r.score*100).toFixed(0)}%)
+                      </div>
+                      <div style={{ color: 'var(--text-secondary)' }} className="mt-1">
+                        {r.content_preview}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

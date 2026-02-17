@@ -2,7 +2,7 @@
 
 This module provides:
 - Document chunking with hybrid strategy (semantic + token limit)
-- Embedding generation using Ollama
+- Embedding generation using unified service (Ollama or OpenAI)
 - FAISS vector index management
 - Integration with the document_chunks table for backup
 """
@@ -10,10 +10,15 @@ import os
 import re
 import pickle
 from typing import List, Optional, Tuple, Dict, Any
-import httpx
 from sqlalchemy.orm import Session
 
-from app.models.models import Document, DocumentChunk, AppSetting
+from app.models.models import Document, DocumentChunk
+from app.services.embedding_service import (
+    generate_embedding,
+    generate_embeddings_batch,
+    get_embedding_settings,
+)
+from app.services.embedding_config import get_model_dimension
 
 # Storage paths
 STORAGE_DIR = os.path.join(
@@ -21,34 +26,14 @@ STORAGE_DIR = os.path.join(
     "storage"
 )
 FAISS_INDEX_DIR = os.path.join(STORAGE_DIR, "faiss_index")
-FAISS_INDEX_FILE = os.path.join(FAISS_INDEX_DIR, "index.faiss")
-FAISS_METADATA_FILE = os.path.join(FAISS_INDEX_DIR, "metadata.pkl")
 
 # Ensure directories exist
 os.makedirs(FAISS_INDEX_DIR, exist_ok=True)
 
 # Default settings
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_EMBEDDING_MODEL = "snowflake-arctic-embed2"  # Multilingual embedding model (magyar+angol)
 MAX_TOKENS_PER_CHUNK = 500
 CHARS_PER_TOKEN_ESTIMATE = 3.5  # Rough estimate for Hungarian/English mixed text
 
-
-def get_ollama_settings(db: Session) -> dict:
-    """Get Ollama settings from database."""
-    settings = {}
-    rows = db.query(AppSetting).filter(
-        AppSetting.key.in_([
-            "ollama_url",
-            "ollama_base_url",
-            "embedding_model",
-        ])
-    ).all()
-
-    for row in rows:
-        settings[row.key] = row.value
-
-    return settings
 
 
 def estimate_tokens(text: str) -> int:
@@ -185,76 +170,35 @@ def chunk_text_hybrid(
     return chunks
 
 
-async def generate_embedding_ollama(
-    text: str,
-    ollama_url: str = DEFAULT_OLLAMA_URL,
-    model: str = DEFAULT_EMBEDDING_MODEL,
-) -> Optional[List[float]]:
-    """Generate embedding for text using Ollama.
-
-    Args:
-        text: Text to embed
-        ollama_url: Ollama server URL
-        model: Embedding model to use
-
-    Returns:
-        List of floats representing the embedding, or None on error
-    """
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{ollama_url}/api/embeddings",
-                json={
-                    "model": model,
-                    "prompt": text,
-                }
-            )
-            response.raise_for_status()
-            result = response.json()
-            return result.get("embedding")
-    except Exception as e:
-        print(f"Error generating embedding: {e}")
-        return None
-
-
-async def generate_embeddings_batch(
-    texts: List[str],
-    ollama_url: str = DEFAULT_OLLAMA_URL,
-    model: str = DEFAULT_EMBEDDING_MODEL,
-) -> List[Optional[List[float]]]:
-    """Generate embeddings for multiple texts.
-
-    Args:
-        texts: List of texts to embed
-        ollama_url: Ollama server URL
-        model: Embedding model to use
-
-    Returns:
-        List of embeddings (or None for failed items)
-    """
-    embeddings = []
-    for text in texts:
-        embedding = await generate_embedding_ollama(text, ollama_url, model)
-        embeddings.append(embedding)
-    return embeddings
 
 
 class FAISSIndex:
-    """FAISS index wrapper for document chunks."""
+    """FAISS index wrapper for document chunks with dimension support."""
 
-    def __init__(self):
+    def __init__(self, dimension: int = 1024):
         self.index = None
         self.metadata: List[Dict[str, Any]] = []  # Stores doc_id, chunk_id, etc.
-        self.dimension: Optional[int] = None
+        self.dimension: Optional[int] = dimension
         self._load_index()
+
+    def _index_path(self) -> str:
+        """Get index file path for specific dimension."""
+        return os.path.join(FAISS_INDEX_DIR, f"index_{self.dimension}.faiss")
+
+    def _meta_path(self) -> str:
+        """Get metadata file path for specific dimension."""
+        return os.path.join(FAISS_INDEX_DIR, f"metadata_{self.dimension}.pkl")
 
     def _load_index(self):
         """Load existing index from disk if available."""
-        if os.path.exists(FAISS_INDEX_FILE) and os.path.exists(FAISS_METADATA_FILE):
+        index_file = self._index_path()
+        meta_file = self._meta_path()
+
+        if os.path.exists(index_file) and os.path.exists(meta_file):
             try:
                 import faiss
-                self.index = faiss.read_index(FAISS_INDEX_FILE)
-                with open(FAISS_METADATA_FILE, "rb") as f:
+                self.index = faiss.read_index(index_file)
+                with open(meta_file, "rb") as f:
                     self.metadata = pickle.load(f)
                 if self.index.ntotal > 0:
                     self.dimension = self.index.d
@@ -268,8 +212,8 @@ class FAISSIndex:
         if self.index is not None:
             try:
                 import faiss
-                faiss.write_index(self.index, FAISS_INDEX_FILE)
-                with open(FAISS_METADATA_FILE, "wb") as f:
+                faiss.write_index(self.index, self._index_path())
+                with open(self._meta_path(), "wb") as f:
                     pickle.dump(self.metadata, f)
             except Exception as e:
                 print(f"Error saving FAISS index: {e}")
@@ -306,7 +250,7 @@ class FAISSIndex:
         # Normalize vectors for cosine similarity
         faiss.normalize_L2(vectors)
 
-        # Ensure index exists
+        # Ensure index exists with correct dimension
         self._ensure_index(vectors.shape[1])
 
         # Add to index
@@ -317,11 +261,7 @@ class FAISSIndex:
         self._save_index()
 
     def remove_document(self, document_id: int):
-        """Remove all chunks for a document from the index.
-
-        Note: FAISS doesn't support direct removal, so we rebuild the index
-        without the removed document's chunks.
-        """
+        """Remove all chunks for a document from the index."""
         import numpy as np
         import faiss
 
@@ -362,15 +302,7 @@ class FAISSIndex:
         query_embedding: List[float],
         k: int = 5
     ) -> List[Tuple[Dict[str, Any], float]]:
-        """Search for similar chunks.
-
-        Args:
-            query_embedding: Query vector
-            k: Number of results to return
-
-        Returns:
-            List of (metadata, score) tuples
-        """
+        """Search for similar chunks."""
         import numpy as np
         import faiss
 
@@ -402,17 +334,23 @@ class FAISSIndex:
             )) if self.metadata else 0,
         }
 
+    def reset(self):
+        """Reset the index completely (for reindexing with new dimension)."""
+        self.index = None
+        self.metadata = []
+        self._save_index()
 
-# Global index instance
-_faiss_index: Optional[FAISSIndex] = None
+
+# Global index instances (per dimension)
+_faiss_instances: Dict[int, FAISSIndex] = {}
 
 
-def get_faiss_index() -> FAISSIndex:
-    """Get or create the FAISS index instance."""
-    global _faiss_index
-    if _faiss_index is None:
-        _faiss_index = FAISSIndex()
-    return _faiss_index
+def get_faiss_index(dimension: int = 1024) -> FAISSIndex:
+    """Get or create a FAISS index instance for the given dimension."""
+    global _faiss_instances
+    if dimension not in _faiss_instances:
+        _faiss_instances[dimension] = FAISSIndex(dimension=dimension)
+    return _faiss_instances[dimension]
 
 
 async def index_document(
@@ -436,10 +374,9 @@ async def index_document(
     """
     from app.routers.documents import extract_document_content
 
-    # Get settings
-    settings = get_ollama_settings(db)
-    ollama_url = settings.get("ollama_url") or settings.get("ollama_base_url") or DEFAULT_OLLAMA_URL
-    embedding_model = settings.get("embedding_model") or DEFAULT_EMBEDDING_MODEL
+    # Get unified embedding settings
+    settings = get_embedding_settings(db)
+    dimension = settings["dimension"]
 
     # Extract text
     text_content, _ = extract_document_content(document.file_path, document.file_type)
@@ -451,9 +388,9 @@ async def index_document(
     db.query(DocumentChunk).filter(DocumentChunk.document_id == document.id).delete()
     db.commit()
 
-    # Remove from FAISS index
-    faiss_index = get_faiss_index()
-    faiss_index.remove_document(document.id)
+    # Remove from FAISS index (all dimension variants)
+    for dim_index in _faiss_instances.values():
+        dim_index.remove_document(document.id)
 
     # Chunk the text
     chunks = chunk_text_hybrid(text_content)
@@ -461,8 +398,8 @@ async def index_document(
     if not chunks:
         return 0, "A dokumentum nem tartalmaz feldolgozható szöveget."
 
-    # Generate embeddings
-    embeddings = await generate_embeddings_batch(chunks, ollama_url, embedding_model)
+    # Generate embeddings using unified service
+    embeddings = await generate_embeddings_batch(chunks, db)
 
     # Store chunks and add to index
     valid_embeddings = []
@@ -489,8 +426,9 @@ async def index_document(
 
     db.commit()
 
-    # Add to FAISS index
+    # Add to FAISS index with correct dimension
     if valid_embeddings:
+        faiss_index = get_faiss_index(dimension=dimension)
         faiss_index.add_embeddings(valid_embeddings, valid_metadata)
 
     failed_count = len(chunks) - len(valid_embeddings)
@@ -532,18 +470,18 @@ async def search_similar_chunks(
     Returns:
         List of results with chunk content, document info, and similarity score
     """
-    settings = get_ollama_settings(db)
-    ollama_url = settings.get("ollama_url") or settings.get("ollama_base_url") or DEFAULT_OLLAMA_URL
-    embedding_model = settings.get("embedding_model") or DEFAULT_EMBEDDING_MODEL
+    # Get unified embedding settings
+    settings = get_embedding_settings(db)
+    dimension = settings["dimension"]
 
-    # Generate query embedding
-    query_embedding = await generate_embedding_ollama(query, ollama_url, embedding_model)
+    # Generate query embedding using unified service
+    query_embedding = await generate_embedding(query, db)
 
     if not query_embedding:
         return []
 
-    # Search in FAISS index
-    faiss_index = get_faiss_index()
+    # Search in FAISS index with correct dimension
+    faiss_index = get_faiss_index(dimension=dimension)
     results = faiss_index.search(query_embedding, k)
 
     # Enrich with chunk content from database

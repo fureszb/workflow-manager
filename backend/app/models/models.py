@@ -359,6 +359,55 @@ class AppSetting(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
+# --- System Settings (Embedding & AI Configuration) ---
+class SystemSettings(Base):
+    __tablename__ = "system_settings"
+    id = Column(Integer, primary_key=True, default=1)
+
+    # ── Embedding Provider Settings ──
+    embedding_provider = Column(
+        String(50),
+        default="ollama",
+        comment="'ollama' vagy 'openrouter'"
+    )
+    embedding_model = Column(
+        String(255),
+        default="bge-m3",
+        comment="A használt embedding modell neve"
+    )
+    embedding_dimension = Column(
+        Integer,
+        default=1024,
+        comment="Az embedding vektor dimenziója"
+    )
+
+    # ── Ollama Settings ──
+    ollama_url = Column(
+        String(500),
+        default="http://localhost:11434",
+        comment="Ollama szerver URL"
+    )
+
+    # ── OpenRouter Settings ──
+    openrouter_api_key = Column(
+        String(500),
+        nullable=True,
+        comment="OpenRouter API kulcs (titkosítva kellene tárolni)"
+    )
+    openrouter_embedding_url = Column(
+        String(500),
+        default="https://api.openrouter.ai/api/v1/embeddings",
+        comment="OpenRouter API endpoint"
+    )
+
+    # ── Chat AI Settings ──
+    chat_provider = Column(String(50), default="ollama")
+    chat_model = Column(String(255), default="llama2")
+
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 # --- Dashboard Widget Layout ---
 class DashboardLayout(Base):
     __tablename__ = "dashboard_layout"

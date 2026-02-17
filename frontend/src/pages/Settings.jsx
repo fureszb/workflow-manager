@@ -5,10 +5,12 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { GripVertical, Trash2, Plus, Star, FileText, File, Loader2, X, Bell, BellOff, Wifi, WifiOff, MessageSquare, ListChecks } from 'lucide-react';
 import SubtaskTemplates from '../components/SubtaskTemplates';
+import EmbeddingSettings from '../components/EmbeddingSettings';
 
 const TABS = [
   { id: 'general', label: 'Általános' },
   { id: 'ai', label: 'AI Személyiség' },
+  { id: 'embedding', label: 'AI Keresés' },
   { id: 'theme', label: 'Téma' },
   { id: 'notifications', label: 'Értesítések' },
   { id: 'knowledge', label: 'Tudásbázis' },
@@ -1431,6 +1433,7 @@ const Settings = () => {
   const tabContent = {
     general: renderGeneral,
     ai: renderAI,
+    embedding: () => <EmbeddingSettings />,
     theme: renderTheme,
     notifications: renderNotifications,
     knowledge: renderKnowledge,

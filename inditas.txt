@@ -40,8 +40,22 @@ python3 --version
 ### MySQL telepítése (adatbázis)
 ```
 sudo apt install -y mysql-server
+```
+
+MySQL indítása – **normál Ubuntu/Linux esetén** (systemd-vel):
+```
 sudo systemctl start mysql
 sudo systemctl enable mysql
+```
+
+MySQL indítása – **konténerben (GitHub Codespaces, Docker, WSL)** – systemd NINCS:
+```
+sudo service mysql start
+```
+
+Ellenőrzés:
+```
+sudo service mysql status
 ```
 
 ---
@@ -167,10 +181,14 @@ npm run dev
 A MySQL felhasználó nincs jól beállítva. Ismételd meg a 2. lépést.
 
 ### "Connection refused" MySQL hiba
-A MySQL nem fut:
+A MySQL nem fut. Normál Ubuntu-n:
 ```
 sudo systemctl start mysql
-sudo systemctl status mysql
+```
+Konténerben (Codespaces, Docker, WSL) – ha systemd nincs:
+```
+sudo service mysql start
+sudo service mysql status
 ```
 
 ### "Module not found" vagy "alembic: command not found"
